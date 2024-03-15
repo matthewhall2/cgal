@@ -13,7 +13,6 @@
 #include <list>
 
 
-
 template<class Kernel>
 class K_visibility_region {
     typedef CGAL::Polygon_2<Kernel> Polygon;
@@ -22,6 +21,11 @@ class K_visibility_region {
     typedef CGAL::Aff_transformation_2<Kernel> Transformation;
     typedef CGAL::Segment_2<Kernel> Segment;
     typedef CGAL::Line_2<Kernel> Line;
+
+    typedef struct {
+        Polygon p;
+        std::vector<Point*> artificialVertices;
+    } SplitPolygon;
 
 
     public:
@@ -32,8 +36,8 @@ class K_visibility_region {
     private:
         Polygon polygon;
 
-        Polygon upper;
-        Polygon lower;
+        SplitPolygon upper;
+        SplitPolygon lower;
         Polygon bounding_box;
 
         Transformation* rotate;
@@ -48,6 +52,11 @@ class K_visibility_region {
         void getLower();
         void merge();
         bool isPointHorizontalWithVertex(Point p);
+        void projection(Point p);
+        void inverseProjection();
+        Polygon lowerProjected;
+        Polygon upperProjected;
+        void getRadial(Point p);
 };
 
 template<typename Kernel>
@@ -66,10 +75,10 @@ void K_visibility_region<Kernel>::getLower() {
         ABOVE=0,
         BELOW=1        
     } state = ABOVE;
-    this->lower.clear();
-    lower.push_back(this->polygon.edge(leftIntersectionIndex).start()); // clockwise orientation, start of edge is below line
+    this->lower.p.clear();
+    lower.p.push_back(this->polygon.edge(leftIntersectionIndex).start()); // clockwise orientation, start of edge is below line
     std::cout << this->polygon.edge(leftIntersectionIndex).start() << " " << this->polygon.edge(leftIntersectionIndex).end() << "\n";
-    lower.push_back(*this->intersectionPoints[this->leftIntersectionIndex].first);
+    lower.p.push_back(*this->intersectionPoints[this->leftIntersectionIndex].first);
     std::cout << *this->intersectionPoints[this->leftIntersectionIndex].first << "\n";
     for (int i = this->leftIntersectionIndex + 1; i < this->intersectionPoints.size(); i++) {
         std::cout << i << "\n";
@@ -79,18 +88,17 @@ void K_visibility_region<Kernel>::getLower() {
             if (this->intersectionPoints[i].first == nullptr) {
                 continue;
             }
-            lower.push_back(*this->intersectionPoints[i].first);
+            lower.p.push_back(*this->intersectionPoints[i].first);
             printf("going below\n");
             state = BELOW;
-
         }
         else if (state == BELOW) {
             std::cout << "below\n";
 
-            lower.push_back(this->polygon.vertex(i));
+            lower.p.push_back(this->polygon.vertex(i));
             if (this->intersectionPoints[i].first != nullptr) {
                 std::cout << *this->intersectionPoints[i].first << "\n";
-                lower.push_back(*this->intersectionPoints[i].first);
+                lower.p.push_back(*this->intersectionPoints[i].first);
                 state = ABOVE;
             }
         }
@@ -108,22 +116,22 @@ void K_visibility_region<Kernel>::getLower() {
                 continue;
             }
             std::cout << *this->intersectionPoints[i].first << "\n";
-            lower.push_back(*this->intersectionPoints[i].first);
+            lower.p.push_back(*this->intersectionPoints[i].first);
             state = BELOW;
 
         }
         else if (state == BELOW) {
             std::cout << "below\n";
 
-            lower.push_back(this->polygon.vertex(i));
+            lower.p.push_back(this->polygon.vertex(i));
             if (this->intersectionPoints[i].first != nullptr) {
                 std::cout << *this->intersectionPoints[i].first << "\n";
-                lower.push_back(*this->intersectionPoints[i].first);
+                lower.p.push_back(*this->intersectionPoints[i].first);
                 state = ABOVE;
             }
         }
     }
-    std::cout << lower.edges().size() << "\n";
+    std::cout << lower.p.edges().size() << "\n";
 }
 
 template<typename Kernel>
@@ -132,10 +140,10 @@ void K_visibility_region<Kernel>::getUpper() {
         ABOVE = 0,
         BELOW = 1
     } state = BELOW;
-    this->upper.clear();
-    upper.push_back(this->polygon.edge(rightIntersectionIndex).start()); // clockwise orientation, start of edge is below line
+    this->upper.p.clear();
+    upper.p.push_back(this->polygon.edge(rightIntersectionIndex).start()); // clockwise orientation, start of edge is below line
     std::cout << this->polygon.edge(rightIntersectionIndex).start() << " " << this->polygon.edge(rightIntersectionIndex).end() << "\n";
-    upper.push_back(*this->intersectionPoints[this->rightIntersectionIndex].first);
+    upper.p.push_back(*this->intersectionPoints[this->rightIntersectionIndex].first);
     std::cout << *this->intersectionPoints[this->rightIntersectionIndex].first << "\n";
     for (int i = this->rightIntersectionIndex + 1; i < this->intersectionPoints.size(); i++) {
         std::cout << i << "\n";
@@ -145,7 +153,7 @@ void K_visibility_region<Kernel>::getUpper() {
             if (this->intersectionPoints[i].first == nullptr) {
                 continue;
             }
-            upper.push_back(*this->intersectionPoints[i].first);
+            upper.p.push_back(*this->intersectionPoints[i].first);
             printf("going below\n");
             state = ABOVE;
 
@@ -153,10 +161,10 @@ void K_visibility_region<Kernel>::getUpper() {
         else if (state == ABOVE) {
             std::cout << "below\n";
 
-            upper.push_back(this->polygon.vertex(i));
+            upper.p.push_back(this->polygon.vertex(i));
             if (this->intersectionPoints[i].first != nullptr) {
                 std::cout << *this->intersectionPoints[i].first << "\n";
-                upper.push_back(*this->intersectionPoints[i].first);
+                upper.p.push_back(*this->intersectionPoints[i].first);
                 state = BELOW;
             }
         }
@@ -174,22 +182,23 @@ void K_visibility_region<Kernel>::getUpper() {
                 continue;
             }
             std::cout << *this->intersectionPoints[i].first << "\n";
-            upper.push_back(*this->intersectionPoints[i].first);
+            upper.p.push_back(*this->intersectionPoints[i].first);
             state = ABOVE;
 
         }
         else if (state == ABOVE) {
             std::cout << "below\n";
 
-            upper.push_back(this->polygon.vertex(i));
+            upper.p.push_back(this->polygon.vertex(i));
             if (this->intersectionPoints[i].first != nullptr) {
                 std::cout << *this->intersectionPoints[i].first << "\n";
-                upper.push_back(*this->intersectionPoints[i].first);
+                upper.p.push_back(*this->intersectionPoints[i].first);
+                
                 state = BELOW;
             }
         }
     }
-    std::cout << lower.edges().size() << "\n";
+   // std::cout << lower.p.edges().size() << "\n";
     //CGAL::draw(upper);
     
 }
@@ -213,14 +222,17 @@ CGAL::Polygon_2<Kernel> K_visibility_region<Kernel>::find_visibility_region(int 
 
     getUpper();
     getLower();
-    CGAL::draw(this->lower);
-    CGAL::draw(this->upper);
-
-
+    //CGAL::draw(this->lower);
+   // CGAL::draw(this->upper);
+    getRadial(p);
 
     return this->polygon;
 }
 
+/*
+* checks if horizontal line <l> going through point <p> intersects a vertex of the polygon <P>. 
+* If it does not, then list <intersectionPoints> will contain all intersection of line l with the boundary of P in clockwise order
+*/
 template<typename Kernel>
 bool K_visibility_region<Kernel>::isPointHorizontalWithVertex(CGAL::Point_2<Kernel> p) {
     if (p.x() < polygon.left_vertex()->x() || p.x() > polygon.right_vertex()->x() || p.y() < polygon.bottom_vertex()->y() || p.y() > polygon.top_vertex()->y()) {
@@ -237,6 +249,9 @@ bool K_visibility_region<Kernel>::isPointHorizontalWithVertex(CGAL::Point_2<Kern
     Line line(Segment(p, Point_2(p.hx() + 1, p.hy())));
     int numEdges = this->polygon.edges().size();
     for (int i = 0; i < numEdges; i++) {
+        if (p == this->polygon.vertex(i)) {
+            return true;
+        }
         Segment edge = this->polygon.edge(i);
 
         const auto intersection = CGAL::intersection(line, edge);
@@ -268,4 +283,36 @@ bool K_visibility_region<Kernel>::isPointHorizontalWithVertex(CGAL::Point_2<Kern
     }
 
     return false;
+}
+
+template <class Kernel>
+void K_visibility_region<Kernel>::projection(CGAL::Point_2<Kernel> p) {
+    //projection is the matrix
+    /*1 0 0
+    * 0 1 0
+    * 0 1 -p.y 
+    */
+    this->upperProjected.clear();
+    this->lowerProjected.clear();
+    for (Point pp : this->lower.p.vertices()) {
+        double x = pp.x();
+        double y = pp.y();
+        double nz = y + -p.y();
+        this->lowerProjected.push_back(Point(x / nz, y / nz));
+    }
+    CGAL::draw(this->lowerProjected);
+
+    for (Point pp : this->upper.p.p.vertices()) {
+        double x = pp.x();
+        double y = pp.y();
+
+        double nz = y + -p.y();
+        this->upperProjected.push_back(Point(x / nz, y / nz));
+    }
+    CGAL::draw(this->upperProjected);
+}
+
+template <class Kernel>
+void K_visibility_region<Kernel>::getRadial(CGAL::Point_2<Kernel> p) {
+    //this->projection(p);
 }
