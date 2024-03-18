@@ -34,6 +34,24 @@ class K_visibility_region {
 
     
     private:
+
+        class K_Vis_Point_2 : public Kernel::Point_2 {
+            public:
+
+                template<typename T1, typename T2>
+                K_Vis_Point_2(const T1& x, const T1& y, bool artificial = false) : Kernel::Point_2(x, y) {
+                    this.artificial = artificial;
+                }
+
+                bool isArtificial();
+
+                void setPair(K_Vis_Point_2& p1, K_Vis_Point_2& p2);
+            private:
+                bool artificial;
+                K_Vis_Point_2 pair;
+        };
+
+
         Polygon polygon;
 
         SplitPolygon upper;
@@ -53,7 +71,7 @@ class K_visibility_region {
         void merge();
         bool isPointHorizontalWithVertex(Point p);
         void projection(Point p);
-        void inverseProjection();
+        void inverseProjection(Point p);
         Polygon lowerProjected;
         Polygon upperProjected;
         void getRadial(Point p);
@@ -62,11 +80,17 @@ class K_visibility_region {
 template<typename Kernel>
 K_visibility_region<Kernel>::K_visibility_region(Polygon p) : polygon(p) {
     intersectionPoints.clear();
+    if (p.is_empty()) {
+        throw std::invalid_argument("Polygon must not be empty.");
+    }
+
+    if (!p.is_simple()) {
+        throw std::invalid_argument("Polygon must be simple.");
+    }
+
     if (this->polygon.orientation() == CGAL::COUNTERCLOCKWISE) {
         this->polygon.reverse_orientation();
     }
-
-    assert(this->polygon.orientation() == CGAL::CLOCKWISE);
 }
 
 template<typename Kernel>
@@ -217,6 +241,7 @@ CGAL::Polygon_2<Kernel> K_visibility_region<Kernel>::find_visibility_region(int 
         }
     }
     
+    
     assert(this->leftIntersectionIndex != -1);
     assert(this->rightIntersectionIndex != -1);
 
@@ -234,10 +259,15 @@ CGAL::Polygon_2<Kernel> K_visibility_region<Kernel>::find_visibility_region(int 
 * If it does not, then list <intersectionPoints> will contain all intersection of line l with the boundary of P in clockwise order
 */
 template<typename Kernel>
-bool K_visibility_region<Kernel>::isPointHorizontalWithVertex(CGAL::Point_2<Kernel> p) {
-    if (p.x() < polygon.left_vertex()->x() || p.x() > polygon.right_vertex()->x() || p.y() < polygon.bottom_vertex()->y() || p.y() > polygon.top_vertex()->y()) {
+bool K_visibility_region<Kernel>::isPointHorizontalWithVertex(Point p) {
+    if ((CGAL::Bounded_side result = this->polygon.bounded_side(p)) == CGAL::ON_BOUNDARY) {
         std::stringstream ss;
-        ss << "Point (" << p << ") not in polygon";
+        ss << "Point (" << p << ") on boundary. Must be inside polygon";
+        throw std::invalid_argument(ss.str());
+    }
+    else if (result == CGAL::ON_UNBOUNDED_SIDE) {
+        std::stringstream ss;
+        ss << "Point (" << p << ") outside polygon. Must be inside polygon";
         throw std::invalid_argument(ss.str());
     }
 
@@ -246,7 +276,7 @@ bool K_visibility_region<Kernel>::isPointHorizontalWithVertex(CGAL::Point_2<Kern
     Point left = p;
     Point right = p;
 
-    Line line(Segment(p, Point_2(p.hx() + 1, p.hy())));
+    Line line(p, Point(p.x() + 1, p.y()));
     int numEdges = this->polygon.edges().size();
     for (int i = 0; i < numEdges; i++) {
         if (p == this->polygon.vertex(i)) {
@@ -260,7 +290,7 @@ bool K_visibility_region<Kernel>::isPointHorizontalWithVertex(CGAL::Point_2<Kern
             continue;
         }
 
-        if (const Segment_2* s = boost::get<Segment_2>(&*intersection)) {
+        if (const Segment* s = boost::get<Segment>(&*intersection)) {
             return true;
         }
 
@@ -270,7 +300,7 @@ bool K_visibility_region<Kernel>::isPointHorizontalWithVertex(CGAL::Point_2<Kern
 
         }
 
-        this->intersectionPoints.push_back(std::make_pair(new Point_2(intersectionPoint->x(), intersectionPoint->y()), i));
+        this->intersectionPoints.push_back(std::make_pair(new Point(intersectionPoint->x(), intersectionPoint->y()), i));
         if (*intersectionPoint < left) {
             this->leftIntersectionIndex = this->intersectionPoints.size() - 1;
             left = *intersectionPoint;
@@ -286,7 +316,7 @@ bool K_visibility_region<Kernel>::isPointHorizontalWithVertex(CGAL::Point_2<Kern
 }
 
 template <class Kernel>
-void K_visibility_region<Kernel>::projection(CGAL::Point_2<Kernel> p) {
+void K_visibility_region<Kernel>::projection(Point p) {
     //projection is the matrix
     /*1 0 0
     * 0 1 0
@@ -313,6 +343,33 @@ void K_visibility_region<Kernel>::projection(CGAL::Point_2<Kernel> p) {
 }
 
 template <class Kernel>
-void K_visibility_region<Kernel>::getRadial(CGAL::Point_2<Kernel> p) {
+void K_visibility_region<Kernel>::inverseProjection(Point p) {
+    //projection is the matrix
+    /*1 0 0
+    * 0 1 0
+    * 0 1 -p.y
+    */
+    this->upperProjected.clear();
+    this->lowerProjected.clear();
+    for (Point pp : this->lower.p.vertices()) {
+        double x = pp.x();
+        double y = pp.y();
+        double nz = y + -p.y();
+        this->lowerProjected.push_back(Point(x / nz, y / nz));
+    }
+    CGAL::draw(this->lowerProjected);
+
+    for (Point pp : this->upper.p.p.vertices()) {
+        double x = pp.x();
+        double y = pp.y();
+
+        double nz = y + -p.y();
+        this->upperProjected.push_back(Point(x / nz, y / nz));
+    }
+    CGAL::draw(this->upperProjected);
+}
+
+template <class Kernel>
+void K_visibility_region<Kernel>::getRadial(Point p) {
     //this->projection(p);
 }
