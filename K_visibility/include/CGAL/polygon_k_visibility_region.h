@@ -15,12 +15,46 @@
 
 template<class Kernel>
 class K_visibility_region {
-    typedef CGAL::Polygon_2<Kernel> Polygon;
+
+    class K_Vis_Point_2 : public Kernel::Point_2 {
+    public:
+
+        K_Vis_Point_2(const typename Kernel::FT& x, const typename Kernel::FT& y, bool isArtificial = false) : Kernel::Point_2(x, y), artificial(isArtificial) {
+           
+        }
+
+        K_Vis_Point_2() : Kernel::Point_2() {
+
+        }
+
+        bool isArtificial() {
+            return true;
+            //return this.artificial;
+        }
+
+        void setPair(K_Vis_Point_2& p1, K_Vis_Point_2& p2) {
+            p1.pair = p2;
+            p2.pair = p1;
+        }
+
+    private:
+        bool artificial;
+        K_Vis_Point_2 *pair;
+    };
+
+    class K_Vis_Kernal : public Kernel {
+    public: 
+        typedef K_Vis_Point_2 Point_2;
+    };
+
+
+    using Traits = CGAL::Arr_segment_traits_2<K_Vis_Kernal>;
     //typedef Polygon::Vertex_const_iterator EdgeIterator;
-    typedef CGAL::Point_2<Kernel> Point;
-    typedef CGAL::Aff_transformation_2<Kernel> Transformation;
-    typedef CGAL::Segment_2<Kernel> Segment;
-    typedef CGAL::Line_2<Kernel> Line;
+    using Point = typename K_Vis_Point_2;
+    using Polygon = CGAL::Polygon_2<K_Vis_Kernal>;
+    using Transformation = CGAL::Aff_transformation_2<K_Vis_Kernal> ;
+    using Segment = CGAL::Segment_2<K_Vis_Kernal> ;
+    using Line = CGAL::Line_2<K_Vis_Kernal> ;
 
     typedef struct {
         Polygon p;
@@ -29,29 +63,13 @@ class K_visibility_region {
 
 
     public:
-        K_visibility_region(Polygon p);
+        K_visibility_region(CGAL::Polygon_2<Kernel> p);
         Polygon find_visibility_region(int k, Point p);
 
     
     private:
 
-        class K_Vis_Point_2 : public Kernel::Point_2 {
-            public:
-
-                template<typename T1, typename T2>
-                K_Vis_Point_2(const T1& x, const T1& y, bool artificial = false) : Kernel::Point_2(x, y) {
-                    this.artificial = artificial;
-                }
-
-                bool isArtificial();
-
-                void setPair(K_Vis_Point_2& p1, K_Vis_Point_2& p2);
-            private:
-                bool artificial;
-                K_Vis_Point_2 pair;
-        };
-
-
+       
         Polygon polygon;
 
         SplitPolygon upper;
@@ -78,7 +96,13 @@ class K_visibility_region {
 };
 
 template<typename Kernel>
-K_visibility_region<Kernel>::K_visibility_region(Polygon p) : polygon(p) {
+K_visibility_region<Kernel>::K_visibility_region(CGAL::Polygon_2<Kernel> p) {
+    this->polygon.clear();
+    Point test(1, 1);
+    for (CGAL::Point_2<Kernel> point : p.vertices()) {
+        this->polygon.push_back(Point(point.x(), point.y()));
+    }
+
     intersectionPoints.clear();
     if (p.is_empty()) {
         throw std::invalid_argument("Polygon must not be empty.");
@@ -228,7 +252,7 @@ void K_visibility_region<Kernel>::getUpper() {
 }
 
 template<typename Kernel>
-CGAL::Polygon_2<Kernel> K_visibility_region<Kernel>::find_visibility_region(int k, CGAL::Point_2<Kernel> p) {
+typename K_visibility_region<Kernel>::Polygon K_visibility_region<Kernel>::find_visibility_region(int k, Point p) {
     // transformations incase rotation is needed
     this->translateToOrigin = new Transformation(CGAL::TRANSLATION, Vector(-p.x(), -p.y()));
     this->translateBack = new Transformation(CGAL::TRANSLATION, Vector(p.x(), p.y()));
