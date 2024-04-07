@@ -18,45 +18,17 @@
 template<class Kernel>
 class K_visibility_region {
 
-    class K_Vis_Point_2 : public Kernel::Point_2 {
-    public:
-
-        K_Vis_Point_2(const typename Kernel::FT& x, const typename Kernel::FT& y, bool isArtificial = false) : Kernel::Point_2(x, y), artificial(isArtificial) {
-           
-        }
-
-        K_Vis_Point_2() : Kernel::Point_2() {
-
-        }
-
-        bool isArtificial() {
-            return this.artificial;
-        }
-
-        void setPair(K_Vis_Point_2& p1, K_Vis_Point_2& p2) {
-            p1.pair = p2;
-            p2.pair = p1;
-        }
-
-    private:
-        bool artificial;
-        K_Vis_Point_2 *pair;
-    };
-
-    class K_Vis_Kernal : public Kernel {
-    public: 
-        typedef K_Vis_Point_2 Point_2;
-    };
+    
 
 
-    using Traits = CGAL::Arr_segment_traits_2<K_Vis_Kernal>;
+    using Traits = CGAL::Arr_segment_traits_2<Kernel>;
     using Arrangement = CGAL::Arrangement_2<Traits>;
     //typedef Polygon::Vertex_const_iterator EdgeIterator;
-    using Point = typename K_Vis_Point_2;
-    using Polygon = CGAL::Polygon_2<K_Vis_Kernal>;
-    using Transformation = CGAL::Aff_transformation_2<K_Vis_Kernal> ;
-    using Segment = CGAL::Segment_2<Traits> ;
-    using Line = CGAL::Line_2<K_Vis_Kernal> ;
+    using Point = CGAL::Point_2<Kernel>;
+    using Polygon = CGAL::Polygon_2<Kernel>;
+    using Transformation = CGAL::Aff_transformation_2<Kernel> ;
+    using Segment = CGAL::Segment_2<Kernel> ;
+    using Line = CGAL::Line_2<Kernel> ;
     using RT = typename Kernel::RT;
 
 
