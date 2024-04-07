@@ -6,11 +6,13 @@
 #include <CGAL/Arr_segment_traits_2.h>
 #include <CGAL/Arrangement_2.h>
 #include <CGAL/intersections.h>
+#include <CGAL/Kernel_traits.h>
 #include <stdbool.h>
 #include <stdexcept>
 #include <fstream>
 #include <cstdio>
 #include <list>
+#include <boost/unordered_map.hpp>
 
 
 template<class Kernel>
@@ -28,8 +30,7 @@ class K_visibility_region {
         }
 
         bool isArtificial() {
-            return true;
-            //return this.artificial;
+            return this.artificial;
         }
 
         void setPair(K_Vis_Point_2& p1, K_Vis_Point_2& p2) {
@@ -49,17 +50,14 @@ class K_visibility_region {
 
 
     using Traits = CGAL::Arr_segment_traits_2<K_Vis_Kernal>;
+    using Arrangement = CGAL::Arrangement_2<Traits>;
     //typedef Polygon::Vertex_const_iterator EdgeIterator;
     using Point = typename K_Vis_Point_2;
     using Polygon = CGAL::Polygon_2<K_Vis_Kernal>;
     using Transformation = CGAL::Aff_transformation_2<K_Vis_Kernal> ;
-    using Segment = CGAL::Segment_2<K_Vis_Kernal> ;
+    using Segment = CGAL::Segment_2<Traits> ;
     using Line = CGAL::Line_2<K_Vis_Kernal> ;
-
-    typedef struct {
-        Polygon p;
-        std::vector<Point*> artificialVertices;
-    } SplitPolygon;
+    using RT = typename Kernel::RT;
 
 
     public:
@@ -72,13 +70,14 @@ class K_visibility_region {
        
         Polygon polygon;
 
-        SplitPolygon upper;
-        SplitPolygon lower;
+        Polygon upper;
+        Polygon lower;
         Polygon bounding_box;
 
         Transformation* rotate;
         Transformation* translateToOrigin;
         Transformation* translateBack;
+        Transformation* moveQueryPoint;
 
         std::vector<std::pair<Point *, int>> intersectionPoints;
         int leftIntersectionIndex;
@@ -93,11 +92,14 @@ class K_visibility_region {
         Polygon lowerProjected;
         Polygon upperProjected;
         void getRadial(Point p);
+        boost::unordered_map<std::tuple<RT, RT, RT, RT>, std::vector<Point>> radialIntersectoinList;
+        Arrangement upperArr;
 };
 
 template<typename Kernel>
 K_visibility_region<Kernel>::K_visibility_region(CGAL::Polygon_2<Kernel> p) {
     this->polygon.clear();
+    Segment a(Point(0, 0), Point(1, 1));
     Point test(1, 1);
     for (CGAL::Point_2<Kernel> point : p.vertices()) {
         this->polygon.push_back(Point(point.x(), point.y()));
@@ -257,6 +259,11 @@ typename K_visibility_region<Kernel>::Polygon K_visibility_region<Kernel>::find_
     this->translateToOrigin = new Transformation(CGAL::TRANSLATION, Vector(-p.x(), -p.y()));
     this->translateBack = new Transformation(CGAL::TRANSLATION, Vector(p.x(), p.y()));
     this->rotate = new Transformation(CGAL::ROTATION, sin(3.1415 / 100), cos(3.1415 / 100));
+    if (p.y() == 0) {
+        this->moveQueryPoint = new Transformation(CGAL::TRANSLATION, Vector(0, 1));
+        p = (*moveQueryPoint)(p);
+        this->polygon = (*moveQueryPoint)(this->polygon);
+    }
 
     // rotate polygon if horizontal line intersects a vertex
     while (this->isPointHorizontalWithVertex(p)) {
