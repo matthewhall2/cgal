@@ -37,6 +37,12 @@ public:
     return K_Vis_Point(x, y, false);
   }
 
+  Point_2
+      operator()(const RT& x, const RT& y, bool art) const
+  {
+      return K_Vis_Point(x, y, art);
+  }
+
   const Point_2&
   operator()(const Point_2 & p) const
   {

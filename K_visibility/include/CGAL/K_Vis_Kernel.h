@@ -24,6 +24,7 @@ public:
   typedef typename K_VisConstruct_bbox_2<typename OldK::Construct_bbox_2, K_Base>
                                             Construct_bbox_2;
 
+
   Construct_point_2
   construct_point_2_object() const
   { return Construct_point_2(); }

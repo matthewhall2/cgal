@@ -21,7 +21,14 @@ public:
   K_VisSegment_2() {}
 
   K_VisSegment_2(const Point_2 &sp, const Point_2 &tp)
-    : sp_(sp), tp_(tp) {}
+    : sp_(sp), tp_(tp), id_(-1) {}
+
+  K_VisSegment_2(const Point_2& sp, const Point_2& tp, int id)
+      : sp_(sp), tp_(tp), id_(id) {}
+
+  int id() const { return id_; }
+
+  int& id() { return id_; }
 
   bool        is_horizontal() const;
   bool        is_vertical() const;
@@ -63,6 +70,7 @@ public:
 
   bool        is_degenerate() const;
   CGAL::Bbox_2      bbox() const;
+  int id_;
 };
 
 template < class R >
