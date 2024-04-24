@@ -29,18 +29,30 @@ public:
 
   Point_2
   operator()(const CGAL::Origin&) const
-  { return K_Vis_Point(0, 0, false); }
+  { return K_Vis_Point(0, 0, false, -1); }
 
   Point_2
   operator()(const RT& x, const RT& y) const
   {
-    return K_Vis_Point(x, y, false);
+    return K_Vis_Point(x, y, false, -1);
+  }
+
+  /*Point_2
+      operator()(const RT& x, const RT& y, const RT& w) const
+  {
+      return K_Vis_Point(x, y, w, false, -1);
+  }*/
+
+  Point_2
+      operator()(const RT& x, const RT& y, bool art, int id) const
+  {
+      return K_Vis_Point(x, y, art, id);
   }
 
   Point_2
-      operator()(const RT& x, const RT& y, bool art) const
+      operator()(const RT& x, const RT& y, const RT& w, bool art, int id) const
   {
-      return K_Vis_Point(x, y, art);
+      return K_Vis_Point(x, y, w, art, id);
   }
 
   const Point_2&

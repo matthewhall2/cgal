@@ -4,14 +4,14 @@
 template <typename K_>
 class K_VisConstruct_coord_iterator {
 public:
-  const double* operator()(const K_Vis_point_2<K_>& p)
+  const typename K_::FT* operator()(const K_Vis_point_2<K_>& p)
   {
     return &p.x();
   }
 
-  const double* operator()(const K_Vis_point_2<K_>& p, int)
+  const typename K_::FT* operator()(const K_Vis_point_2<K_>& p, int)
   {
-    const double* pyptr = &p.y();
+    const K_::FT* pyptr = &p.y();
     pyptr++;
     return pyptr;
   }

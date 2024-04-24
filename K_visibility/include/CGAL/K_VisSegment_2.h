@@ -21,14 +21,33 @@ public:
   K_VisSegment_2() {}
 
   K_VisSegment_2(const Point_2 &sp, const Point_2 &tp)
-    : sp_(sp), tp_(tp), id_(-1) {}
+    : sp_(sp), tp_(tp), id_(-2) {
+      sp_.id() = sp.id();
+      sp_.id() = sp.id();
+  }
 
   K_VisSegment_2(const Point_2& sp, const Point_2& tp, int id)
-      : sp_(sp), tp_(tp), id_(id) {}
+      : sp_(sp), tp_(tp), id_(id) {
+      sp_.id() = sp.id();
+      sp_.id() = sp.id();
+  }
+
+  int id_;
+
+  std::string toString() {
+      std::ostringstream  o;
+      o << sp_.toString() << " " << tp_.toString();
+      return o.str();
+  }
+
 
   int id() const { return id_; }
 
   int& id() { return id_; }
+
+  void setId(int id) {
+      this->id_ = id;
+  }
 
   bool        is_horizontal() const;
   bool        is_vertical() const;
@@ -65,12 +84,11 @@ public:
 
   Segment_2   transform(const Aff_transformation_2 &t) const
   {
-    return Segment_2(t.transform(source()), t.transform(target()));
+    return Segment_2(t.transform(source()), t.transform(target()), this->id_, 1);
   }
 
   bool        is_degenerate() const;
   CGAL::Bbox_2      bbox() const;
-  int id_;
 };
 
 template < class R >
@@ -175,7 +193,7 @@ inline
 typename K_VisSegment_2<R>::Segment_2
 K_VisSegment_2<R>::opposite() const
 {
-  return K_VisSegment_2<R>(target(), source());
+  return K_VisSegment_2<R>(target(), source(), this->id_);
 }
 
 template < class R >
@@ -234,9 +252,9 @@ operator<<(std::ostream &os, const K_VisSegment_2<R> &s)
 {
     switch(CGAL::IO::get_mode(os)) {
     case CGAL::IO::ASCII :
-        return os << s.source() << ' ' << s.target();
+        return os << s.source().toString() << ' ' << s.target().toString() << " id: " << s.id();
     case CGAL::IO::BINARY :
-        return os << s.source() << s.target();
+        return os << s.source() << s.target() << " id: " << s.id();
     default:
         return os << "K_VisSegment_2(" << s.source() <<  ", " << s.target() << ")";
     }
