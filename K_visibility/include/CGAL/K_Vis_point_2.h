@@ -11,18 +11,19 @@ private:
   
   bool artificial;
   int id_;
+  bool isTip_;
   typename K_::FT testx;
   typename K_::FT testy;
 public:
 
-  K_Vis_point_2(): K_::Point_2(), artificial(false), id_(-1)
+  K_Vis_point_2(): K_::Point_2(), artificial(false), id_(-1), isTip_(false)
   {
      
   }
 
   
   K_Vis_point_2(const typename K_::FT x, const typename K_::FT y, bool artificial = false, int id=-1) 
-    : K_::Point_2(x, y), testx(x), testy(y), artificial(artificial), id_(id)
+    : K_::Point_2(x, y), testx(x), testy(y), artificial(artificial), id_(id), isTip_(false)
   {
      
   }
@@ -47,6 +48,13 @@ public:
   int id() const { return id_; }
 
   int& id() { return id_; }
+
+  bool isTip() const { return isTip_; }
+  bool& isTip() { return isTip_; }
+
+  void setId(int id) {
+      id_ = id;
+  }
 
 
   bool operator==(const K_Vis_point_2 &p) const
