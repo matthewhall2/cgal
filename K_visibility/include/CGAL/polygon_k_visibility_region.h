@@ -1086,10 +1086,10 @@
             if (toInsert->target()->point() != last->target()->point()) {
                 nextRegionHalfedges.push_back(toInsert);
             }
-            else {
+           /* else {
                 toInsert = toInsert->next();
                 nextRegionHalfedges.push_back(toInsert);
-            }
+            }*/
             // not called when tip, so not needed
             /*else if (((Segment)(edge->curve())).direction() == ((Segment)(edge->next()->curve())).direction()) {
                 nextRegionHalfedges.push_back(edge->next());
