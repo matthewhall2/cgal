@@ -282,13 +282,27 @@
     template<typename Kernel>
     K_visibility_region<Kernel>::K_visibility_region(CGAL::Polygon_2<Kernel> p) {
         this->polygon.clear();
+        if (p.orientation() == CGAL::CLOCKWISE) {
+            p.reverse_orientation();
+        }
+        this->polygon.clear();
         int i = 0;
         for (CGAL::Point_2<Kernel> point : p.vertices()) {
-            Point p(point.x(), point.y());
-            p.id() = i;
-            this->polygon.push_back(p);
+            Point np(point.x(), point.y());
+            np.id() = i;
+            CGAL::Segment_2<Kernel> e1 = p.edge(i);
+            CGAL::Segment_2<Kernel> e2 = (i - 1 >= 0 ? p.edge(i - 1) : p.edge(p.edges().size() - 1));
+            Kernel::FT res = CGAL::determinant(e2.to_vector(), e1.to_vector());
+            if (res < 0) {
+                std::cout << "reflex" << std::endl;
+                np.isReflex() = true;
+            }
+
+            this->polygon.push_back(np);
             i += 1;
         }
+        CGAL::draw(p);
+
 
         std::vector<Segment> x;
         x.push_back(Segment(Point(0, 0), Point(1, 1)));
@@ -1037,7 +1051,7 @@
             for (Halfedge_const_handle h : nextRegionHalfedges) {
                 insert(test, Segment(h->source()->point(), h->target()->point()));
             }
-             // CGAL::draw(test);
+        //    CGAL::draw(test);
         }
     }
 
@@ -1064,11 +1078,16 @@
 
         if (nextRegionHalfedges.size() == 0) {
             nextRegionHalfedges.push_back(toInsert);
+          
         }
         else {
             Halfedge_const_handle last = nextRegionHalfedges.back();
             //   std::cout << "last edge target " << last->target()->point() << ", edge target " << edge->target()->point() << std::endl;
             if (toInsert->target()->point() != last->target()->point()) {
+                nextRegionHalfedges.push_back(toInsert);
+            }
+            else {
+                toInsert = toInsert->next();
                 nextRegionHalfedges.push_back(toInsert);
             }
             // not called when tip, so not needed
@@ -1078,8 +1097,9 @@
             }*/
         }
         int count = 0;
+        //(next->source()->point().isReflex() && !next->target()->point().baseAwayFromQP())
         Halfedge_const_handle next = toInsert->next();
-        while ((next->target()->point() != edge->source()->point()) && (!next->source()->point().isReflex())) {
+        while (((next->target()->point() != edge->source()->point()) && (!next->source()->point().isReflex()))) {
             nextRegionHalfedges.push_back(next);
             next = next->next();
             count += 1;
@@ -1124,6 +1144,13 @@
             }
 
             if (const Point* p = boost::get<Point>(&*result)) {
+                if (*p == queryEdge->source()->point()) {
+                    // queryEdge = queryEdge->next();
+                    return &*queryEdge->prev();
+                }
+                if (*p == queryEdge->target()->point()) {
+                    return &*queryEdge->next();
+                }
                 Vertex_handle split = splitEdge(&*queryEdge, *p);
                 Halfedge_handle newEdge = arr.insert_at_vertices(X_monotone_curve(edge->target()->point(), split->point()), (Vertex_handle)(&*edge->target()), split);
                 //   Halfedge_const_handle newEdge = arr.insert_in_face_interior(X_monotone_curve(start, *p), face);
