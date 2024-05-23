@@ -101,6 +101,8 @@
         Point lowestAboveL;
         Point highestBelowL;
 
+        FT ymin, ymax, xmin, xmax;
+
         std::vector<std::pair<Point*, int>> intersectionPoints;
         int leftIntersectionIndex;
         int rightIntersectionIndex;
@@ -116,6 +118,12 @@
         void addHalfedge(Halfedge_const_handle stop);
         void insertBbox();
         void insertBboxHelper(Segment check, Segment stopCheck, int index);
+        typedef enum {
+           HORIZONTAL,
+           VERTICAL
+        } DIR;
+
+        void findBbox(Point, DIR);
         Halfedge_handle extendRadial(Halfedge_const_handle);
         Vertex_handle splitEdge(Halfedge_handle, Point);
 
@@ -276,7 +284,9 @@
         std::vector<Halfedge_const_handle> currentRegionHalfedges;
         std::vector<Halfedge_const_handle> nextRegionHalfedges;
         std::vector<Segment> bboxEdges;
+        std::vector<Point> bboxCorners;
 
+       
     };
 
     template<typename Kernel>
@@ -497,25 +507,12 @@
         for (int i = 0; i < polygon.vertices().size(); i++) {
             pointToSegments[polygon.vertex(i).id()] = std::make_pair(polygon.edge(i), polygon.edge(i));
         }
-        bboxEdges.clear();
-        auto left = polygon.left_vertex();
-        auto right = polygon.right_vertex();
-        auto top = polygon.top_vertex();
-        auto bottom = polygon.bottom_vertex();
-        bboxEdges.push_back(Segment(Point(right->x(), top->y()), Point(left->x(), top->y())));
-        bboxEdges.push_back(Segment(Point(left->x(), top->y()), Point(left->x(), bottom->y())));
-        bboxEdges.push_back(Segment(Point(left->x(), bottom->y()), Point(right->x(), bottom->y())));
-        bboxEdges.push_back(Segment(Point(right->x(), bottom->y()), Point(right->x(), top->y())));
-
         CGAL::draw(polygon);
         getLowerUpper();
        // getRadial(this->queryPoint);
         insert_non_intersecting_curves(arr, polygon.edges().begin(), polygon.edges().end());
-       insertBbox();
+        insertBbox();
         naiveRadial(this->queryPoint);
-        insert(arr, radialList.begin(), radialList.end());
-       
-        CGAL::draw(arr);
      //   insert_non_intersecting_curves(arr, radialList.begin(), radialList.end());
         findZeroVisibilty();
 
@@ -949,6 +946,12 @@
     template<class Kernel>
     void K_visibility_region<Kernel>::findZeroVisibilty() {
       //  CGAL::draw(arr);
+      
+        CGAL::draw(arr);
+        Halfedge_iterator h = arr.halfedges_begin();
+        Face_handle f = h->face()->is_unbounded() ? h->twin()->face() : h->face();
+
+
         Arrangement polyArr;
         insert(polyArr, polygon.edges_begin(), polygon.edges_end());
         Face_const_handle inputPolygonFace, radialDecompZeroFace;
@@ -964,9 +967,11 @@
         CGAL::Arr_point_location_result<Arrangement>::Type zeroFaceResult = zeroFacePointLocation.locate(queryPoint);
         Face_const_handle zeroVisibiltyFace = *boost::get<Face_const_handle>(&zeroFaceResult);
 
+        insert(arr, radialList.begin(), radialList.end());
         CGAL::Arr_naive_point_location<Arrangement> radialArrPointLocation(arr);
         CGAL::Arr_point_location_result<Arrangement>::Type radialDecompZeroResult = radialArrPointLocation.locate(queryPoint);
         radialDecompZeroFace = *boost::get<Face_const_handle>(&radialDecompZeroResult);
+        assert(*radialDecompZeroFace == *f);
 
         auto edge = radialDecompZeroFace->outer_ccb();
         Halfedge_const_handle edge2 = edge->twin();
@@ -994,13 +999,13 @@
             }
             assert(sid != -1 && tid != -1);
             assert(radialDecompZeroFace == edge->face());
-            FT a = getAngle(edge->source()->point());
+         //   FT a = getAngle(edge->source()->point());
             Segment e = (Segment)edge->curve();
             Point p = e.start();
             testing[edge] = 1;
             nextRegionHalfedges.push_back(edge);
           //  visibilityEdges.push_back(edge->source()->point());
-            std::cout << "angle is: " << a << std::endl;
+         //   std::cout << "angle is: " << a << std::endl;
             std::cout << "id is " << edge->source()->point().id() << std::endl;
             if (edge->source()->point().id() == -1) {
                 Halfedge_const_handle hh;
@@ -1078,7 +1083,6 @@
 
         if (nextRegionHalfedges.size() == 0) {
             nextRegionHalfedges.push_back(toInsert);
-          
         }
         else {
             Halfedge_const_handle last = nextRegionHalfedges.back();
@@ -1086,10 +1090,10 @@
             if (toInsert->target()->point() != last->target()->point()) {
                 nextRegionHalfedges.push_back(toInsert);
             }
-           /* else {
+            else {
                 toInsert = toInsert->next();
                 nextRegionHalfedges.push_back(toInsert);
-            }*/
+            }
             // not called when tip, so not needed
             /*else if (((Segment)(edge->curve())).direction() == ((Segment)(edge->next()->curve())).direction()) {
                 nextRegionHalfedges.push_back(edge->next());
@@ -1144,6 +1148,7 @@
             }
 
             if (const Point* p = boost::get<Point>(&*result)) {
+                
                 if (*p == queryEdge->source()->point()) {
                     // queryEdge = queryEdge->next();
                     return &*queryEdge->prev();
@@ -1172,6 +1177,7 @@
 
     template<class Kernel>
     typename K_visibility_region<Kernel>::Vertex_handle K_visibility_region<Kernel>::splitEdge(Halfedge_handle edge, Point p) {
+        p.isTip() = true;
         Segment c1(edge->source()->point(), p);
         Segment c2(p, edge->target()->point());
         Halfedge_handle split = arr.split_edge(edge, c1, c2);
@@ -1188,6 +1194,8 @@
         Point right = *polygon.right_vertex();
         Point top = *polygon.top_vertex();
         Point bottom = *polygon.bottom_vertex();
+
+        this->ymin = bottom.y(), this->xmin = left.x(), this->ymax = top.y(), this->xmax = right.y();
         int i = 0;
         int leftIndex, rightIndex, topIndex, bottomIndex;
         for (Point p : polygon.vertices()) {
@@ -1206,11 +1214,20 @@
             i++;
         }
 
-        Segment topSeg(Point(right.x(), top.y()), Point(left.x(), top.y()));
-        Segment leftSeg(Point(left.x(), top.y()), Point(left.x(), bottom.y()));
+        Point topRight(right.x(), top.y());
+        Point topLeft(left.x(), top.y());
+        Point bottomLeft(left.x(), bottom.y());
+        Point bottomRight(right.x(), bottom.y());
+        bboxCorners.push_back(topRight);
+        bboxCorners.push_back(topLeft);
+        bboxCorners.push_back(bottomRight);
+        bboxCorners.push_back(bottomRight);
 
-        Segment bottomSeg(Point(left.x(), bottom.y()), Point(right.x(), bottom.y()));
-        Segment rightSeg(Point(right.x(), bottom.y()), Point(right.x(), top.y()));
+        Segment topSeg(topRight, topLeft);
+        Segment leftSeg(topLeft, bottomLeft);
+
+        Segment bottomSeg(bottomLeft, bottomRight);
+        Segment rightSeg(bottomRight, topRight);
 
         std::vector<Segment> edges;
 
@@ -1218,17 +1235,21 @@
         insertBboxHelper(leftSeg, bottomSeg, leftIndex);
         insertBboxHelper(bottomSeg, rightSeg, bottomIndex);
         insertBboxHelper(rightSeg, topSeg, rightIndex);
+
+        for (Segment s : bboxEdges) {
+            assert(s.is_horizontal() || s.is_vertical());
+        }
         insert(arr, bboxEdges.begin(), bboxEdges.end());
     }
 
     template<class Kernel>
-    void K_visibility_region<Kernel>::insertBboxHelper(Segment check, Segment stopCheck, int index) {
-        Point lastPoint = check.source();
+    void K_visibility_region<Kernel>::insertBboxHelper(Segment checkedEdge, Segment stopCheck, int index) {
+        Point lastPoint = checkedEdge.source();
         auto size = polygon.vertices().size();
         Segment edge = polygon.edge(index);
         auto  result = CGAL::intersection(edge, stopCheck);
         while (!result) {
-            auto const intPoint = CGAL::intersection(edge, check);
+            auto const intPoint = CGAL::intersection(edge, checkedEdge);
             if (!intPoint) {
                 index += 1;
                 if (index >= size) {
@@ -1260,9 +1281,17 @@
             result = CGAL::intersection(edge, stopCheck);
 
         }
-        if (bboxEdges.back().target() != check.target()) {
-            bboxEdges.push_back(Segment(lastPoint, check.target()));
+        if (bboxEdges.back().target() != checkedEdge.target()) {
+            bboxEdges.push_back(Segment(lastPoint, checkedEdge.target()));
         }
+    }
+
+    template<class Kernel>
+    void K_visibility_region<Kernel>::findBbox(Point p, DIR d) {
+        Segment s1 = DIR == HORIZONTAL ? Segment(this->xmin, p.y()) : Segment(p.x(), this->ymin);
+        Segment s2 = DIR == HORIZONTAL ? Segment(this->xmax, p.y()) : Segment(p.x(), this->ymax);
+
+
     }
 
 
