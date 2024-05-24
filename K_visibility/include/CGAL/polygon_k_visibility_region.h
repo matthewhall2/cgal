@@ -553,12 +553,7 @@
 
         // checking if point in inside polygon
         CGAL::Bounded_side result;
-        if ((result = this->polygon.bounded_side(p)) == CGAL::ON_BOUNDARY) {
-            std::stringstream ss;
-            ss << "Point (" << p << ") on boundary. Must be inside polygon";
-            throw std::invalid_argument(ss.str());
-        }
-        else if (result == CGAL::ON_UNBOUNDED_SIDE) {
+        if (result == CGAL::ON_UNBOUNDED_SIDE) {
             std::stringstream ss;
             ss << "Point (" << p << ") outside polygon. Must be inside polygon";
             throw std::invalid_argument(ss.str());
@@ -577,11 +572,15 @@
         int numEdges = this->polygon.edges().size();
         this->intersectionPoints.clear(); // clear before incase of multiple calls due to intersection with vertex
         for (int i = 0; i < numEdges; i++) {
-            if (p == this->polygon.vertex(i)) {
+            /*if (p == this->polygon.vertex(i)) {
                 return true;
-            }
+            }*/
             Segment edge = this->polygon.edge(i);
             Point vertex = edge.start();
+
+            if (p != vertex && line.has_on(vertex)) {
+                return true;
+            }
 
             const auto intersection = CGAL::intersection(line, edge);
             if (!intersection) {
@@ -589,6 +588,7 @@
                 continue;
             }
 
+         
             if (vertex.y() < p.y() && vertex.y() > this->highestBelowL.y()) {
                 this->highestBelowL = vertex;
             }
@@ -597,16 +597,7 @@
                 this->lowestAboveL = vertex;
             }
 
-            // if l is collinear with edge of polygon
-            if (const Segment* s = boost::get<Segment>(&*intersection)) {
-                return true;
-            }
-
-            // if l intersects vertex of polygon
             const Point* intersectionPoint = boost::get<Point>(&*intersection);
-            if (*intersectionPoint == this->polygon.vertex(i)) {
-                return true;
-            }
 
             // gets leftmost intersection point for use in getLower()
             this->intersectionPoints.push_back(std::make_pair(new Point(intersectionPoint->x(), intersectionPoint->y()), i));
@@ -950,30 +941,34 @@
         CGAL::draw(arr);
         Halfedge_iterator h = arr.halfedges_begin();
         Face_handle f = h->face()->is_unbounded() ? h->twin()->face() : h->face();
+        insert(arr, radialList.begin(), radialList.end());
 
 
         Arrangement polyArr;
         insert(polyArr, polygon.edges_begin(), polygon.edges_end());
         Face_const_handle inputPolygonFace, radialDecompZeroFace;
         CGAL::Arr_naive_point_location<Arrangement> inputPolyPointLocation(polyArr);
-        CGAL::Arr_point_location_result<Arrangement>::Type inputFaceResult = inputPolyPointLocation.locate(queryPoint);
-        // The query point locates in the interior of a face
-        inputPolygonFace = *boost::get<Face_const_handle>(&inputFaceResult);
-        RegularVisibilityOutput.clear();
-        RSPV regular_visibility(polyArr);
-        regular_visibility.compute_visibility(queryPoint, inputPolygonFace, RegularVisibilityOutput);
+      CGAL::Arr_point_location_result<Arrangement>::Type inputFaceResult = inputPolyPointLocation.locate(queryPoint);
+       //  The query point locates in the interior of a face
+       inputPolygonFace = *boost::get<Face_const_handle>(&inputFaceResult);
+      RegularVisibilityOutput.clear();
+       RSPV regular_visibility(polyArr);
+       regular_visibility.compute_visibility(queryPoint, inputPolygonFace, RegularVisibilityOutput);
+       CGAL::draw(RegularVisibilityOutput);
         
         CGAL::Arr_naive_point_location<Arrangement> zeroFacePointLocation(RegularVisibilityOutput);
         CGAL::Arr_point_location_result<Arrangement>::Type zeroFaceResult = zeroFacePointLocation.locate(queryPoint);
         Face_const_handle zeroVisibiltyFace = *boost::get<Face_const_handle>(&zeroFaceResult);
 
-        insert(arr, radialList.begin(), radialList.end());
         CGAL::Arr_naive_point_location<Arrangement> radialArrPointLocation(arr);
         CGAL::Arr_point_location_result<Arrangement>::Type radialDecompZeroResult = radialArrPointLocation.locate(queryPoint);
         radialDecompZeroFace = *boost::get<Face_const_handle>(&radialDecompZeroResult);
-        assert(*radialDecompZeroFace == *f);
+     //   assert(*radialDecompZeroFace == *f);
 
-        auto edge = radialDecompZeroFace->outer_ccb();
+     //   RSPV regular_visibility(arr);
+      //  regular_visibility.compute_visibility(queryPoint, f, RegularVisibilityOutput);
+
+        auto edge = f->outer_ccb();
         Halfedge_const_handle edge2 = edge->twin();
         assert(radialDecompZeroFace == edge->face());
         std::cout << typeid(Point(1, 1)).name() << std::endl;
@@ -1015,7 +1010,7 @@
         //  std::cout << ((Segment)(edge->curve())).start().id() << std::endl;
           //edge = edge->next();
             edge++;
-        } while (edge != radialDecompZeroFace->outer_ccb());
+        } while (edge != f->outer_ccb());
        // std::reverse(visibilityEdges.begin(), visibilityEdges.end());
     }
 
