@@ -57,6 +57,7 @@
 
         using Vertex_handle = typename Arrangement::Vertex_handle;
         using Halfedge_handle = typename Arrangement::Halfedge_handle;
+        using Halfedge = typename Arrangement::Halfedge;
         using Face_handle = typename Arrangement::Face_handle;
         using Face = typename Arrangement::Face;
         using Vertex_const_handle = typename Arrangement::Vertex_const_handle;
@@ -197,6 +198,9 @@
         Arrangement lowerArr;
         Arrangement arr;
         Arrangement RegularVisibilityOutput;
+        Halfedge_handle zeroVisEdge;
+        void getZeroVisEdge();
+        void addBoundingBox();
 
         std::vector<Segment> upperEdgeList;
         std::vector<Segment> lowerEdgeList;
@@ -511,7 +515,7 @@
         getLowerUpper();
        // getRadial(this->queryPoint);
         insert_non_intersecting_curves(arr, polygon.edges().begin(), polygon.edges().end());
-        insertBbox();
+       // insertBbox();
         naiveRadial(this->queryPoint);
      //   insert_non_intersecting_curves(arr, radialList.begin(), radialList.end());
         findZeroVisibilty();
@@ -553,7 +557,7 @@
 
         // checking if point in inside polygon
         CGAL::Bounded_side result;
-        if (result == CGAL::ON_UNBOUNDED_SIDE) {
+        if ((result = this->polygon.bounded_side(p)) == CGAL::ON_UNBOUNDED_SIDE) {
             std::stringstream ss;
             ss << "Point (" << p << ") outside polygon. Must be inside polygon";
             throw std::invalid_argument(ss.str());
@@ -936,51 +940,36 @@
 
     template<class Kernel>
     void K_visibility_region<Kernel>::findZeroVisibilty() {
-      //  CGAL::draw(arr);
-      
-        CGAL::draw(arr);
-        Halfedge_iterator h = arr.halfedges_begin();
-        Face_handle f = h->face()->is_unbounded() ? h->twin()->face() : h->face();
-        insert(arr, radialList.begin(), radialList.end());
-
-
-        Arrangement polyArr;
-        insert(polyArr, polygon.edges_begin(), polygon.edges_end());
-        Face_const_handle inputPolygonFace, radialDecompZeroFace;
-        CGAL::Arr_naive_point_location<Arrangement> inputPolyPointLocation(polyArr);
-      CGAL::Arr_point_location_result<Arrangement>::Type inputFaceResult = inputPolyPointLocation.locate(queryPoint);
-       //  The query point locates in the interior of a face
-       inputPolygonFace = *boost::get<Face_const_handle>(&inputFaceResult);
-      RegularVisibilityOutput.clear();
-       RSPV regular_visibility(polyArr);
-       regular_visibility.compute_visibility(queryPoint, inputPolygonFace, RegularVisibilityOutput);
-       CGAL::draw(RegularVisibilityOutput);
+        getZeroVisEdge();
         
-        CGAL::Arr_naive_point_location<Arrangement> zeroFacePointLocation(RegularVisibilityOutput);
+      
+     
+        
+     /*   CGAL::Arr_naive_point_location<Arrangement> zeroFacePointLocation(RegularVisibilityOutput);
         CGAL::Arr_point_location_result<Arrangement>::Type zeroFaceResult = zeroFacePointLocation.locate(queryPoint);
         Face_const_handle zeroVisibiltyFace = *boost::get<Face_const_handle>(&zeroFaceResult);
 
         CGAL::Arr_naive_point_location<Arrangement> radialArrPointLocation(arr);
         CGAL::Arr_point_location_result<Arrangement>::Type radialDecompZeroResult = radialArrPointLocation.locate(queryPoint);
-        radialDecompZeroFace = *boost::get<Face_const_handle>(&radialDecompZeroResult);
+        radialDecompZeroFace = *boost::get<Face_const_handle>(&radialDecompZeroResult);*/
      //   assert(*radialDecompZeroFace == *f);
 
      //   RSPV regular_visibility(arr);
       //  regular_visibility.compute_visibility(queryPoint, f, RegularVisibilityOutput);
 
-        auto edge = f->outer_ccb();
+        Halfedge_handle edge = this->zeroVisEdge;
         Halfedge_const_handle edge2 = edge->twin();
-        assert(radialDecompZeroFace == edge->face());
+    //    assert(radialDecompZeroFace == edge->face());
         std::cout << typeid(Point(1, 1)).name() << std::endl;
-        std::cout << typeid(*edge).name() << std::endl;
-        Face_handle fh = &(*(edge->face()));
+     //   std::cout << typeid(*edge).name() << std::endl;
+     /*   Face_handle fh = &(*(edge->face()));
         for (auto testFace = arr.faces_begin(); testFace != arr.faces_end(); testFace++) {
             if (&*testFace == &*radialDecompZeroFace) {
                 std::cout << "found match if face" << std::endl;
             }
         }
         polyArr.insert_in_face_interior(Point(1, 1), fh);
-        assert(&*fh == &*(edge->face()));
+        assert(&*fh == &*(edge->face()));*/
        // edge = edge2;
        // assert(face2->inner_ccbs_begin() != face2->inner_ccbs_end());
         do {
@@ -992,8 +981,8 @@
             if (curr.direction() == nex.direction()) {
                 std::cout << "same dir as next edge" << std::endl;
             }
-            assert(sid != -1 && tid != -1);
-            assert(radialDecompZeroFace == edge->face());
+        //    assert(sid != -1 && tid != -1);
+         //   assert(radialDecompZeroFace == edge->face());
          //   FT a = getAngle(edge->source()->point());
             Segment e = (Segment)edge->curve();
             Point p = e.start();
@@ -1002,15 +991,15 @@
           //  visibilityEdges.push_back(edge->source()->point());
          //   std::cout << "angle is: " << a << std::endl;
             std::cout << "id is " << edge->source()->point().id() << std::endl;
-            if (edge->source()->point().id() == -1) {
+           /* if (edge->source()->point().id() == -1) {
                 Halfedge_const_handle hh;
                 CGAL::Arr_point_location_result<Arrangement>::Type obj2 = inputPolyPointLocation.locate(edge->source()->point());
                 hh = *boost::get<Halfedge_const_handle>(&obj2);
-            }
+            }*/
         //  std::cout << ((Segment)(edge->curve())).start().id() << std::endl;
           //edge = edge->next();
-            edge++;
-        } while (edge != f->outer_ccb());
+            edge = edge->next();
+        } while (edge != this->zeroVisEdge);
        // std::reverse(visibilityEdges.begin(), visibilityEdges.end());
     }
 
@@ -1286,6 +1275,65 @@
         Segment s1 = DIR == HORIZONTAL ? Segment(this->xmin, p.y()) : Segment(p.x(), this->ymin);
         Segment s2 = DIR == HORIZONTAL ? Segment(this->xmax, p.y()) : Segment(p.x(), this->ymax);
 
+    }
+
+    /*
+    * gets any edge of zero visibility region (non-deterministic - depends on order of points entered into polygon)
+    */
+    template<class Kernel>
+    void K_visibility_region<Kernel>::getZeroVisEdge() {
+
+        RegularVisibilityOutput.clear();
+        RSPV regular_visibility(this->arr);
+        auto h = this->arr.halfedges_begin();
+        Face_handle intFace = h->face()->is_unbounded() ? h->twin()->face() : h->face();
+        regular_visibility.compute_visibility(this->queryPoint, intFace, RegularVisibilityOutput);
+
+        CGAL::draw(RegularVisibilityOutput);
+        
+        int sid, tid;
+        Halfedge_handle start = RegularVisibilityOutput.halfedges_begin()->twin(); // calling twin ensures its a halfedge_handle
+        start = start->face()->is_unbounded() ? start->twin() : start;
+        Halfedge_handle edge = start;
+        do {
+            if ((sid = edge->source()->point().id()) >= 0 && (tid = edge->target()->point().id()) >= 0) {
+                break;
+            }
+            edge = edge->next();
+        } while (edge != start);
+
+        insert(arr, radialList.begin(), radialList.end());
+        // find zero vis region first on just the arrangement of the input polygon
+        // look for (or get) id of edge (sum of point ids) of edge in zero vis region
+        // use that edge here
+
+        Halfedge_iterator hit = this->arr.halfedges_begin();
+        Halfedge_handle hh = hit->next()->prev();
+        // find halfedge that belongs to original polygon
+        // guarenteed to be at least one full edge of original polygon that is 0-visibly from query point
+        for (hit = this->arr.halfedges_begin(); hit != this->arr.halfedges_end(); hit++) {
+            if (hit->source()->point().id() == sid && hit->target()->point().id() == tid) {
+                this->zeroVisEdge = hit->twin()->twin();
+                break;
+            }
+        }
+        
+
+        if (hit == arr.halfedges_end()) {
+            std::cout << "face not found" << std::endl;
+        }
+
+        /*if (hh->face()->is_unbounded()) {
+          //  this->zeroVisEdge = hh->twin();
+        }
+        else
+        {
+            this->zeroVisEdge = hh;
+        }*/
+    }
+
+    template<class Kernel>
+    void K_visibility_region<Kernel>::addBoundingBox() {
 
     }
 
