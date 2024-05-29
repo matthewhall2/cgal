@@ -43,10 +43,7 @@
         using Traits = typename CGAL::Arr_segment_traits_2<MK>;
         using GPS_Traits = typename CGAL::Gps_segment_traits_2<MK>;
         using Arrangement = CGAL::Arrangement_2<Traits>;
-        using Point3 = CGAL::Point_3<Kernel>;
-        //  using Poly_traits = typename CGAL::Arr_polyline_traits_2<MK>;
-        //  using Poly_arr = CGAL::Arrangement_2<Poly_traits>;
-          //typedef Polygon::Vertex_const_iterator EdgeIterator;
+     
         using Point = typename MK::Point_2;
         using Polygon = CGAL::Polygon_2<MK>;
         using Transformation = K_Vis_Transformation_2<MK>;
@@ -137,8 +134,9 @@
         Vertex_handle splitEdge(Halfedge_handle, Point);
 
         Point projection(Point p) {
-            // projection is the matrix
-            /*1 0 0
+            /*
+            *  projection is the matrix
+            1 0 0
             * 0 1 0
             * 0 1 -qp.y
             */
@@ -156,8 +154,10 @@
         }
 
         Point inverseProjection(Point p) {
-            // projection is the matrix
-           /*1 0 0
+            
+           /*
+           * projection is the matrix
+           * 1 0 0
            * 0 1 0
            * 0 1/qp.y -1/qp.y
            */
@@ -169,25 +169,20 @@
         //    FT nz = CGAL::inverse(this->queryPoint.y()) * y - CGAL::inverse(this->queryPoint.y()) * this->hws[p.id()];
 
             Point P(x * this->hws[p.id()], y * this->hws[p.id()]);
-            //auto P = new Point(p.x() * p.hw(), p.y() * p.hw(), 1);
             P.isArtificial() = p.isArtificial();
             assert(hws.find(-1) == hws.end());
 
             return  P;
         }
 
-        Point3 p3(Point p) {
-            return Point3(p.x(), p.y(), 0);
-        }
+      
         Polygon lowerProjected;
         Polygon upperProjected;
         void getRadial(Point p);
         void naiveRadial(Point p);
         void radialHelper(Point p, Arrangement arr, int &artCounter);
         
-        //    CGAL::Unique_hash_map<std::tuple<FT, FT, FT, FT>, bool> ttt;
-        //   boost::unordered_map<std::tuple<FT, FT, FT, FT>, std::vector<Point>> radialIntersectoinList;
-          //  std::unordered_map<Point, bool> artificialVertexList;
+       
         Arrangement upperArr;
         Arrangement lowerArr;
         Arrangement arr;
@@ -243,7 +238,6 @@
             FT y = sy + a * (ty - sy);
             Point rp(x, y);
             assert(polygon.has_on_boundary(rp));
-          //  Line l = (Line)hh->curve();
             return rp;
         }
 
@@ -307,23 +301,7 @@
             i += 1;
         }
         CGAL::draw(p);
-
-
-        std::vector<Segment> x;
-        x.push_back(Segment(Point(0, 0), Point(1, 1)));
-        x.push_back(Segment(Point(2, 2), Point(2, 1)));
-        Arrangement testa;
-        insert(testa, x.begin(), x.end());
-        // CGAL::draw(testa);
-
-        Vert_decomp_list vd_list;
-        CGAL::decompose(testa, std::back_inserter(vd_list));
-        int count = 0;
-        for (auto vd_iter = vd_list.begin(); vd_iter != vd_list.end(); ++vd_iter) {
-            count += 1;
-        }
-
-
+      
         intersectionPoints.clear();
         if (p.is_empty()) {
             throw std::invalid_argument("Polygon must not be empty.");
@@ -345,10 +323,6 @@
         insert_non_intersecting_curve(test, Segment(Point(1, 1), Point(1, 0)));
         Halfedge_handle edge = insert_non_intersecting_curve(test, Segment(Point(1, 0), Point(0, 0)));
         Face_handle f = (edge->face()->is_unbounded() ? edge->twin()->face() : edge->face());
-       // test.insert_in_face_interior(X_monotone_curve(Point(0.5, 0), Point(0.5, 1)), f);
-     //   CGAL::draw(test);
-      //  insert_non_intersecting_curve(test, Segment(Point(0.5, 0), Point(0.5, 1)));
-       // insert(test, Segment(Point(0, 0), Point(1, 1)));
     }
 
     template<typename Kernel>
@@ -433,8 +407,6 @@
         std::vector<Segment> testUpper;
         int artCounter = 0;
         int nv = this->polygon.vertices().size();
-     //   assert(this->queryPoint.y() - highestBelowL.y() > 0);
-     //   assert(lowestAboveL.y() - this->queryPoint.y() > 0);
 
         FT ly = this->queryPoint.y() - (CGAL::abs(this->queryPoint.y() - highestBelowL.y())) * EPSILON;
         FT uy = this->queryPoint.y() + (CGAL::abs(this->lowestAboveL.y() - this->queryPoint.y())) * EPSILON;
@@ -449,8 +421,6 @@
         insert(testArrLower, testLower.begin(), testLower.end());
         Arrangement testArrUpper;
         insert(testArrUpper, testUpper.begin(), testUpper.end());
-      //  CGAL::draw(testArrLower);
-     //   CGAL::draw(testArrUpper);
     }
 
     template<typename Kernel>
@@ -493,11 +463,7 @@
         }
         CGAL::draw(polygon);
         getLowerUpper();
-       // getRadial(this->queryPoint);
         insert_non_intersecting_curves(arr, polygon.edges().begin(), polygon.edges().end());
-       // insertBbox();
-       
-     //   insert_non_intersecting_curves(arr, radialList.begin(), radialList.end());
         findZeroVisibilty();
 
         Polygon region;
@@ -514,16 +480,6 @@
             CGAL::draw(region);
             k -= 1;
         }
-
-      
-
-      /*  CGAL::draw(this->polygon);
-        CGAL::draw(RegularVisibilityOutput);
-        Arrangement testarr;*/
-       
-       // CGAL::draw(arr);
-     //   Vertex_handle v = arr.insert_in_face_interior(Point(polygon.left_vertex()->x(), polygon.top_vertex()->y()), arr.unbounded_face());
-        int test = 5;
      return this->polygon;
     }
 
@@ -696,14 +652,11 @@
         Arrangement arr1;
         Arrangement arr2;
         CGAL::insert(arr1, el2.begin(), el2.end());
-    //    CGAL::draw(arr1);
         CGAL::insert(arr2, ul2.begin(), ul2.end());
-    //    CGAL::draw(arr2);
 
 
         radialHelper(p, lowerArr, artCounter);
         radialHelper(p, upperArr, artCounter);
-      //  CGAL::draw(testPolygon);
     }
 
     template <class Kernel>
@@ -930,13 +883,7 @@
             Point p = e.start();
             testing[edge] = 1;
             nextRegionHalfedges.push_back(edge);
-         
-           /* if (edge->source()->point().id() == -1) {
-                Halfedge_const_handle hh;
-                CGAL::Arr_point_location_result<Arrangement>::Type obj2 = inputPolyPointLocation.locate(edge->source()->point());
-                hh = *boost::get<Halfedge_const_handle>(&obj2);
-            }*/
-     
+
             edge = edge->next();
         } while (edge != this->zeroVisEdge);
       
@@ -1289,9 +1236,3 @@
             lastV = h->source();
         }
     }
-
-
-      
-
-
-
