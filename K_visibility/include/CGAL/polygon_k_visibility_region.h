@@ -1261,11 +1261,11 @@
     }
 
     
-
-    template<class Kernel>
-    void K_visibility_region<Kernel>::insertBbox(FT val, SIDE d, FT stopVal1, FT stopVal2, Vertex_handle corner1, Vertex_handle corner2) {
 #define targetStopCoord(s, h) ((s == TOP || s == BOTTOM) ? h->target()->point().x() : h->target()->point().y())
 #define targetCollinearCoord(s, h)  ((s == TOP || s == BOTTOM) ? h->target()->point().y() : h->target()->point().x())
+    template<class Kernel>
+    void K_visibility_region<Kernel>::insertBbox(FT val, SIDE d, FT stopVal1, FT stopVal2, Vertex_handle corner1, Vertex_handle corner2) {
+
         // find halfedge that has source().y() (or .x()) equal to val
         Halfedge_handle h = arr.halfedges_begin()->twin();
         for (auto hh = arr.halfedges_begin(); hh != arr.halfedges_end(); hh++) {
@@ -1284,115 +1284,53 @@
            }
         }
 
+        Vertex_handle c = corner1;
+        FT stopVal = stopVal1;
         Vertex_handle lastV = h->source();
         Halfedge_handle temp = h;
-        
-        // don't use segments collinear with bounding box
-        while (targetCollinearCoord(d, h) == val) {
-            h = h->next();
-            lastV = h->source();
-        }
-        while (targetStopCoord(d, h) != stopVal1) {
-            if (targetCollinearCoord(d, h) == val) {
-                Segment s(lastV->point(), h->target()->point());
-                BboxEdge e = {lastV, h->target()};
-                bboxEdges.push_back(e);
-              //  arr.insert_at_vertices(s, lastV, h->target());
-              //  CGAL::draw(arr);
-                lastV = h->target();
-            }
-
-            h = h->next();
+        for (int i = 0; i < 2; i++) {
             while (targetCollinearCoord(d, h) == val) {
                 h = h->next();
                 lastV = h->source();
             }
+            while (targetStopCoord(d, h) != stopVal) {
+                if (targetCollinearCoord(d, h) == val) {
+                    Segment s(lastV->point(), h->target()->point());
+                    BboxEdge e = { lastV, h->target() };
+                    bboxEdges.push_back(e);
+                    lastV = h->target();
+                }
 
-        }
+                h = h->next();
+                while (targetCollinearCoord(d, h) == val) {
+                    h = h->next();
+                    lastV = h->source();
+                }
 
-        Point target = h->target()->point();
-        Point source = h->source()->point();
-        if (target == corner1->point()) {
-            if (((d == TOP || d == BOTTOM) ? source.y() : source.x()) != val) {
-                Segment s(lastV->point(), h->target()->point());
-                BboxEdge e = { lastV, h->target() };
-                bboxEdges.push_back(e);
-                //arr.insert_at_vertices(s, lastV, h->target());
             }
-        }
-        else {
-            Segment s(lastV->point(), corner1->point());
-            BboxEdge e = { lastV, corner1};
-            bboxEdges.push_back(e);
-          //  arr.insert_at_vertices(s, lastV, corner1);
-            //insert_non_intersecting_curve(arr, );
-        }
-      //  CGAL::draw(arr);
 
-        h = temp;
-        h = h->twin()->next();
-        temp = h;
-        lastV = h->source();
+            Point target = h->target()->point();
+            Point source = h->source()->point();
+            if (target == c->point()) {
+                if (((d == TOP || d == BOTTOM) ? source.y() : source.x()) != val) {
+                    Segment s(lastV->point(), h->target()->point());
+                    BboxEdge e = { lastV, h->target() };
+                    bboxEdges.push_back(e);
+                }
+            }
+            else {
+                Segment s(lastV->point(), c->point());
+                BboxEdge e = { lastV, c };
+                bboxEdges.push_back(e);
+            }
 
-        while (targetCollinearCoord(d, h) == val) {
-            h = h->next();
+            c = corner2;
+            stopVal = stopVal2;
+            h = temp;
+            h = h->twin()->next();
+            temp = h;
             lastV = h->source();
         }
-        while (targetStopCoord(d, h) != stopVal2) {
-            if (targetCollinearCoord(d, h) == val) {
-                Segment s(lastV->point(), h->target()->point());
-                BboxEdge e = { lastV, h->target() };
-                bboxEdges.push_back(e);
-              //  arr.insert_at_vertices(s, lastV, h->target());
-              //  CGAL::draw(arr);
-                lastV = h->target();
-            }
-
-            h = h->next();
-            while (targetCollinearCoord(d, h) == val) {
-                h = h->next();
-                lastV = h->source();
-            }
-
-        }
-
-         target = h->target()->point();
-         source = h->source()->point();
-        if (target == corner2->point()) {
-            if (((d == TOP || d == BOTTOM) ? source.y() : source.x()) != val) {
-                Segment s(lastV->point(), h->target()->point());
-                BboxEdge e = { lastV, h->target() };
-                bboxEdges.push_back(e);
-               // arr.insert_at_vertices(s, lastV, h->target());
-            }
-        }
-        else {
-            Segment s(lastV->point(), corner2->point());
-            BboxEdge e = { lastV, corner2 };
-            bboxEdges.push_back(e);
-           // arr.insert_at_vertices(s, lastV, corner2);
-
-           // insert_non_intersecting_curve(arr, s);
-        }
-        //CGAL::draw(arr);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     }
 
 
