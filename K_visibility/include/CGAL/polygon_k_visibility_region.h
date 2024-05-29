@@ -117,14 +117,22 @@
         void findNextRegion();
         int countFaceSides(Face_const_handle);
         void addHalfedge(Halfedge_const_handle stop);
-        void insertBbox();
-        void insertBboxHelper(Segment check, Segment stopCheck, int index);
         typedef enum {
-           HORIZONTAL,
-           VERTICAL
-        } DIR;
+            TOP,
+            LEFT,
+            BOTTOM,
+            RIGHT
+        } SIDE;
 
-        void findBbox(Point, DIR);
+        typedef struct {
+            Vertex_handle vh1;
+            Vertex_handle vh2;
+        } BboxEdge;
+        std::vector<BboxEdge> bboxEdges;
+        void insertBbox(FT, SIDE, FT, FT, Vertex_handle, Vertex_handle);
+        void getBboxIntersections(Segment edge, std::vector<Point>& list);
+        
+
         Halfedge_handle extendRadial(Halfedge_const_handle);
         Vertex_handle splitEdge(Halfedge_handle, Point);
 
@@ -199,6 +207,7 @@
         Arrangement arr;
         Arrangement RegularVisibilityOutput;
         Halfedge_handle zeroVisEdge;
+        bool hasTopRight, hasTopLeft, hasBottomLeft, hasBottomRight;
         void getZeroVisEdge();
         void addBoundingBox();
 
@@ -287,8 +296,7 @@
 
         std::vector<Halfedge_const_handle> currentRegionHalfedges;
         std::vector<Halfedge_const_handle> nextRegionHalfedges;
-        std::vector<Segment> bboxEdges;
-        std::vector<Point> bboxCorners;
+        
 
        
     };
@@ -516,7 +524,7 @@
        // getRadial(this->queryPoint);
         insert_non_intersecting_curves(arr, polygon.edges().begin(), polygon.edges().end());
        // insertBbox();
-        naiveRadial(this->queryPoint);
+       
      //   insert_non_intersecting_curves(arr, radialList.begin(), radialList.end());
         findZeroVisibilty();
 
@@ -803,6 +811,9 @@
         int pid = polygon.vertices().size();
         for (auto v = arr.vertices_begin(); v != arr.vertices_end(); v++) {
             Point vertex = v->point();
+            if (vertex.id() == -1) {
+                continue;
+            }
             leftDist = FT(1000000000);
             rightDist = FT(100000000);
             bool foundLeft = false;
@@ -941,37 +952,8 @@
     template<class Kernel>
     void K_visibility_region<Kernel>::findZeroVisibilty() {
         getZeroVisEdge();
-        
-      
-     
-        
-     /*   CGAL::Arr_naive_point_location<Arrangement> zeroFacePointLocation(RegularVisibilityOutput);
-        CGAL::Arr_point_location_result<Arrangement>::Type zeroFaceResult = zeroFacePointLocation.locate(queryPoint);
-        Face_const_handle zeroVisibiltyFace = *boost::get<Face_const_handle>(&zeroFaceResult);
-
-        CGAL::Arr_naive_point_location<Arrangement> radialArrPointLocation(arr);
-        CGAL::Arr_point_location_result<Arrangement>::Type radialDecompZeroResult = radialArrPointLocation.locate(queryPoint);
-        radialDecompZeroFace = *boost::get<Face_const_handle>(&radialDecompZeroResult);*/
-     //   assert(*radialDecompZeroFace == *f);
-
-     //   RSPV regular_visibility(arr);
-      //  regular_visibility.compute_visibility(queryPoint, f, RegularVisibilityOutput);
-
         Halfedge_handle edge = this->zeroVisEdge;
-        Halfedge_const_handle edge2 = edge->twin();
-    //    assert(radialDecompZeroFace == edge->face());
-        std::cout << typeid(Point(1, 1)).name() << std::endl;
-     //   std::cout << typeid(*edge).name() << std::endl;
-     /*   Face_handle fh = &(*(edge->face()));
-        for (auto testFace = arr.faces_begin(); testFace != arr.faces_end(); testFace++) {
-            if (&*testFace == &*radialDecompZeroFace) {
-                std::cout << "found match if face" << std::endl;
-            }
-        }
-        polyArr.insert_in_face_interior(Point(1, 1), fh);
-        assert(&*fh == &*(edge->face()));*/
-       // edge = edge2;
-       // assert(face2->inner_ccbs_begin() != face2->inner_ccbs_end());
+   
         do {
             std::cout << "reg vis : [" << edge->source()->point() << " -> " << edge->target()->point() << "]" << std::endl;
             int sid = edge->source()->point().id();
@@ -981,26 +963,22 @@
             if (curr.direction() == nex.direction()) {
                 std::cout << "same dir as next edge" << std::endl;
             }
-        //    assert(sid != -1 && tid != -1);
-         //   assert(radialDecompZeroFace == edge->face());
-         //   FT a = getAngle(edge->source()->point());
+     
             Segment e = (Segment)edge->curve();
             Point p = e.start();
             testing[edge] = 1;
             nextRegionHalfedges.push_back(edge);
-          //  visibilityEdges.push_back(edge->source()->point());
-         //   std::cout << "angle is: " << a << std::endl;
+         
             std::cout << "id is " << edge->source()->point().id() << std::endl;
            /* if (edge->source()->point().id() == -1) {
                 Halfedge_const_handle hh;
                 CGAL::Arr_point_location_result<Arrangement>::Type obj2 = inputPolyPointLocation.locate(edge->source()->point());
                 hh = *boost::get<Halfedge_const_handle>(&obj2);
             }*/
-        //  std::cout << ((Segment)(edge->curve())).start().id() << std::endl;
-          //edge = edge->next();
+     
             edge = edge->next();
         } while (edge != this->zeroVisEdge);
-       // std::reverse(visibilityEdges.begin(), visibilityEdges.end());
+      
     }
 
     template<class Kernel>
@@ -1168,121 +1146,12 @@
         return split->target();
     }
 
-    template<class Kernel>
-    void K_visibility_region<Kernel>::insertBbox() {
-        if (polygon.orientation() == CGAL::CLOCKWISE) {
-            polygon.reverse_orientation();
-        }
-        bboxEdges.clear();
-        Point left = *polygon.left_vertex();
-        Point right = *polygon.right_vertex();
-        Point top = *polygon.top_vertex();
-        Point bottom = *polygon.bottom_vertex();
-
-        this->ymin = bottom.y(), this->xmin = left.x(), this->ymax = top.y(), this->xmax = right.y();
-        int i = 0;
-        int leftIndex, rightIndex, topIndex, bottomIndex;
-        for (Point p : polygon.vertices()) {
-            if (p == left) {
-                leftIndex = i;
-            }
-            else if (p == right) {
-                rightIndex = i;
-            }
-            else if (p == top) {
-                topIndex = i;
-            }
-            else if (p == bottom) {
-                bottomIndex = i;
-            }
-            i++;
-        }
-
-        Point topRight(right.x(), top.y());
-        Point topLeft(left.x(), top.y());
-        Point bottomLeft(left.x(), bottom.y());
-        Point bottomRight(right.x(), bottom.y());
-        bboxCorners.push_back(topRight);
-        bboxCorners.push_back(topLeft);
-        bboxCorners.push_back(bottomRight);
-        bboxCorners.push_back(bottomRight);
-
-        Segment topSeg(topRight, topLeft);
-        Segment leftSeg(topLeft, bottomLeft);
-
-        Segment bottomSeg(bottomLeft, bottomRight);
-        Segment rightSeg(bottomRight, topRight);
-
-        std::vector<Segment> edges;
-
-        insertBboxHelper(topSeg, leftSeg, topIndex);
-        insertBboxHelper(leftSeg, bottomSeg, leftIndex);
-        insertBboxHelper(bottomSeg, rightSeg, bottomIndex);
-        insertBboxHelper(rightSeg, topSeg, rightIndex);
-
-        for (Segment s : bboxEdges) {
-            assert(s.is_horizontal() || s.is_vertical());
-        }
-        insert(arr, bboxEdges.begin(), bboxEdges.end());
-    }
-
-    template<class Kernel>
-    void K_visibility_region<Kernel>::insertBboxHelper(Segment checkedEdge, Segment stopCheck, int index) {
-        Point lastPoint = checkedEdge.source();
-        auto size = polygon.vertices().size();
-        Segment edge = polygon.edge(index);
-        auto  result = CGAL::intersection(edge, stopCheck);
-        while (!result) {
-            auto const intPoint = CGAL::intersection(edge, checkedEdge);
-            if (!intPoint) {
-                index += 1;
-                if (index >= size) {
-                    index = 0;
-                }
-                edge = polygon.edge(index);
-                result = CGAL::intersection(edge, stopCheck);
-                continue;
-            }
-
-            if (const Point* p = boost::get<Point>(&*intPoint)) {
-                if (*p != lastPoint) {
-                    bboxEdges.push_back(Segment(lastPoint, *p));
-                    lastPoint = *p;
-                }
-            }
-            else if (const Segment* s = boost::get<Segment>(&*intPoint)) {
-                if (s->source() != lastPoint) {
-                    bboxEdges.push_back(Segment(lastPoint, s->source()));
-                    lastPoint = s->target();
-
-                }
-            }
-            index += 1;
-            if (index >= size) {
-                index = 0;
-            }
-            edge = polygon.edge(index);
-            result = CGAL::intersection(edge, stopCheck);
-
-        }
-        if (bboxEdges.back().target() != checkedEdge.target()) {
-            bboxEdges.push_back(Segment(lastPoint, checkedEdge.target()));
-        }
-    }
-
-    template<class Kernel>
-    void K_visibility_region<Kernel>::findBbox(Point p, DIR d) {
-        Segment s1 = DIR == HORIZONTAL ? Segment(this->xmin, p.y()) : Segment(p.x(), this->ymin);
-        Segment s2 = DIR == HORIZONTAL ? Segment(this->xmax, p.y()) : Segment(p.x(), this->ymax);
-
-    }
 
     /*
     * gets any edge of zero visibility region (non-deterministic - depends on order of points entered into polygon)
     */
     template<class Kernel>
     void K_visibility_region<Kernel>::getZeroVisEdge() {
-
         RegularVisibilityOutput.clear();
         RSPV regular_visibility(this->arr);
         auto h = this->arr.halfedges_begin();
@@ -1302,40 +1171,232 @@
             edge = edge->next();
         } while (edge != start);
 
+       
+        addBoundingBox();
+        naiveRadial(this->queryPoint);
         insert(arr, radialList.begin(), radialList.end());
-        // find zero vis region first on just the arrangement of the input polygon
-        // look for (or get) id of edge (sum of point ids) of edge in zero vis region
-        // use that edge here
-
+        CGAL::draw(arr);
+        
         Halfedge_iterator hit = this->arr.halfedges_begin();
         Halfedge_handle hh = hit->next()->prev();
-        // find halfedge that belongs to original polygon
-        // guarenteed to be at least one full edge of original polygon that is 0-visibly from query point
+        /*
+        * find halfedge that belongs to original polygon
+        * guarenteed to be at least one full edge of original polygon that is 0-visible from query point
+        */
         for (hit = this->arr.halfedges_begin(); hit != this->arr.halfedges_end(); hit++) {
             if (hit->source()->point().id() == sid && hit->target()->point().id() == tid) {
                 this->zeroVisEdge = hit->twin()->twin();
-                break;
+               break;
             }
         }
-        
-
-        if (hit == arr.halfedges_end()) {
-            std::cout << "face not found" << std::endl;
-        }
-
-        /*if (hh->face()->is_unbounded()) {
-          //  this->zeroVisEdge = hh->twin();
-        }
-        else
-        {
-            this->zeroVisEdge = hh;
-        }*/
     }
 
     template<class Kernel>
     void K_visibility_region<Kernel>::addBoundingBox() {
+        
+        hasTopRight = false;
+        hasTopLeft = false;
+        hasBottomLeft = false;
+        hasBottomRight = false;
+        Point left = *polygon.left_vertex();
+        Point right = *polygon.right_vertex();
+        Point top = *polygon.top_vertex();
+        Point bottom = *polygon.bottom_vertex();
+
+        Point topRight(right.x(), top.y());
+        Point topLeft(left.x(), top.y());
+        Point bottomLeft(left.x(), bottom.y());
+        Point bottomRight(right.x(), bottom.y());
+        
+        Vertex_handle trHandle, tlHandle, blHandle, brHandle;
+
+        for (auto vh : arr.vertex_handles()) {
+            if (vh->point() == topRight) {
+                hasTopRight = true;
+                trHandle = vh;
+            }
+            else if (vh->point() == topLeft) {
+                hasTopLeft = true;
+                tlHandle = vh;
+            }
+            else if (vh->point() == bottomLeft) {
+                hasBottomLeft = true;
+                blHandle = vh;
+            }
+            else if (vh->point() == bottomRight) {
+                hasBottomLeft = true;
+                brHandle = vh;
+            }
+        }
+
+        if (!hasTopRight) {
+            trHandle = arr.insert_in_face_interior(topRight, arr.unbounded_face());
+        }
+
+        if (!hasTopLeft) {
+            tlHandle = arr.insert_in_face_interior(topLeft, arr.unbounded_face());
+        }
+
+        if (!hasBottomLeft) {
+            blHandle = arr.insert_in_face_interior(bottomLeft, arr.unbounded_face());
+        }
+
+        if (!hasBottomRight) {
+            brHandle = arr.insert_in_face_interior(bottomRight, arr.unbounded_face());
+        }
+
+        std::vector<Point> topInts, leftInts, bottomInts, RightInts;
+        insertBbox(top.y(), TOP, left.x(), right.x(), tlHandle, trHandle);
+        insertBbox(left.x(), LEFT, bottom.y(), top.y(), blHandle, tlHandle);
+        insertBbox(bottom.y(), BOTTOM, right.x(), left.x(), brHandle, blHandle);
+        insertBbox(right.x(), RIGHT, top.y(), bottom.y(), trHandle, brHandle);
+
+        for (BboxEdge e : this->bboxEdges) {
+            Segment s(e.vh1->point(), e.vh2->point());
+            arr.insert_at_vertices(s, e.vh1, e.vh2);
+        }
+
+        CGAL::draw(arr);
 
     }
+
+    
+
+    template<class Kernel>
+    void K_visibility_region<Kernel>::insertBbox(FT val, SIDE d, FT stopVal1, FT stopVal2, Vertex_handle corner1, Vertex_handle corner2) {
+#define targetStopCoord(s, h) ((s == TOP || s == BOTTOM) ? h->target()->point().x() : h->target()->point().y())
+#define targetCollinearCoord(s, h)  ((s == TOP || s == BOTTOM) ? h->target()->point().y() : h->target()->point().x())
+        // find halfedge that has source().y() (or .x()) equal to val
+        Halfedge_handle h = arr.halfedges_begin()->twin();
+        for (auto hh = arr.halfedges_begin(); hh != arr.halfedges_end(); hh++) {
+            // skip edges of bounding box
+            if (hh->source()->point().id() == -1 || hh->target()->point().id() == -1) {
+                continue;
+            }
+            if (d == TOP || d == BOTTOM) {
+                if (hh->source()->point().y() == val) {
+                    h = hh->face()->is_unbounded() ? hh->twin()->next() : hh->twin()->twin();
+                }
+            }else if(d == LEFT || d == RIGHT) {
+                if (hh->source()->point().x() == val) {
+                    h = hh->face()->is_unbounded() ? hh->twin()->next() : hh->twin()->twin();
+                }
+           }
+        }
+
+        Vertex_handle lastV = h->source();
+        Halfedge_handle temp = h;
+        
+        // don't use segments collinear with bounding box
+        while (targetCollinearCoord(d, h) == val) {
+            h = h->next();
+            lastV = h->source();
+        }
+        while (targetStopCoord(d, h) != stopVal1) {
+            if (targetCollinearCoord(d, h) == val) {
+                Segment s(lastV->point(), h->target()->point());
+                BboxEdge e = {lastV, h->target()};
+                bboxEdges.push_back(e);
+              //  arr.insert_at_vertices(s, lastV, h->target());
+              //  CGAL::draw(arr);
+                lastV = h->target();
+            }
+
+            h = h->next();
+            while (targetCollinearCoord(d, h) == val) {
+                h = h->next();
+                lastV = h->source();
+            }
+
+        }
+
+        Point target = h->target()->point();
+        Point source = h->source()->point();
+        if (target == corner1->point()) {
+            if (((d == TOP || d == BOTTOM) ? source.y() : source.x()) != val) {
+                Segment s(lastV->point(), h->target()->point());
+                BboxEdge e = { lastV, h->target() };
+                bboxEdges.push_back(e);
+                //arr.insert_at_vertices(s, lastV, h->target());
+            }
+        }
+        else {
+            Segment s(lastV->point(), corner1->point());
+            BboxEdge e = { lastV, corner1};
+            bboxEdges.push_back(e);
+          //  arr.insert_at_vertices(s, lastV, corner1);
+            //insert_non_intersecting_curve(arr, );
+        }
+      //  CGAL::draw(arr);
+
+        h = temp;
+        h = h->twin()->next();
+        temp = h;
+        lastV = h->source();
+
+        while (targetCollinearCoord(d, h) == val) {
+            h = h->next();
+            lastV = h->source();
+        }
+        while (targetStopCoord(d, h) != stopVal2) {
+            if (targetCollinearCoord(d, h) == val) {
+                Segment s(lastV->point(), h->target()->point());
+                BboxEdge e = { lastV, h->target() };
+                bboxEdges.push_back(e);
+              //  arr.insert_at_vertices(s, lastV, h->target());
+              //  CGAL::draw(arr);
+                lastV = h->target();
+            }
+
+            h = h->next();
+            while (targetCollinearCoord(d, h) == val) {
+                h = h->next();
+                lastV = h->source();
+            }
+
+        }
+
+         target = h->target()->point();
+         source = h->source()->point();
+        if (target == corner2->point()) {
+            if (((d == TOP || d == BOTTOM) ? source.y() : source.x()) != val) {
+                Segment s(lastV->point(), h->target()->point());
+                BboxEdge e = { lastV, h->target() };
+                bboxEdges.push_back(e);
+               // arr.insert_at_vertices(s, lastV, h->target());
+            }
+        }
+        else {
+            Segment s(lastV->point(), corner2->point());
+            BboxEdge e = { lastV, corner2 };
+            bboxEdges.push_back(e);
+           // arr.insert_at_vertices(s, lastV, corner2);
+
+           // insert_non_intersecting_curve(arr, s);
+        }
+        //CGAL::draw(arr);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    }
+
+
+      
 
 
 
