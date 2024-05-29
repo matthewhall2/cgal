@@ -142,46 +142,32 @@
             * 0 1 0
             * 0 1 -qp.y
             */
-            //  std::cout << "projecting point: " << p << "\n";
-       //     std::cout << "projecting with id: " << p.id() << std::endl;
             FT x = p.hx();
             FT y = p.hy();
             FT nz = CGAL::abs(y - this->queryPoint.y());
-            //  std::cout << "query point: " << this->queryPoint << " hw = " << nz <<  std::endl;
             if (!p.isArtificial())             this->hws[p.id()] = nz;
 
-            //    std::cout << "proj dif: " << nz << "\n";
             Point P(x / nz, y / nz, 1);
             //auto P = new Point(x , y , nz);
             P.isArtificial() = p.isArtificial();
             P.id() = p.id();
             assert(hws.find(-1) == hws.end());
-            std::cout << "new w is " << nz << std::endl;
-            std::cout << "y is " << y << std::endl;
             return  P;
         }
 
         Point inverseProjection(Point p) {
-            std::cout << "inv projecting" << std::endl;
             // projection is the matrix
            /*1 0 0
            * 0 1 0
            * 0 1/qp.y -1/qp.y
            */
-          //  std::cout << "inv proj id" << p.id() << std::endl;
-         //   std::cout << "inv projecting point: " << p << "\n";
-         //   std::cout << "homo: " << p.hx() << " " << p.hy() << std::endl;
             FT x = p.hx();
             FT y = p.hy();
             assert(p.id() != -1);
             assert(hws.find(p.id()) != hws.end());
             //  FT nz = y - this->queryPoint.y();
         //    FT nz = CGAL::inverse(this->queryPoint.y()) * y - CGAL::inverse(this->queryPoint.y()) * this->hws[p.id()];
-          //  std::cout << "inv proj query point: " << this->queryPoint << " hw = " << this->hws[p.id()] << std::endl;
 
-            //     std::cout << "proj dif: " << nz << "\n";
-                 //std::cout << "query point: " << this->queryPoint << std::endl;
-            std::cout << "homo " << hws[p.id()] << std::endl;
             Point P(x * this->hws[p.id()], y * this->hws[p.id()]);
             //auto P = new Point(p.x() * p.hw(), p.y() * p.hw(), 1);
             P.isArtificial() = p.isArtificial();
@@ -223,7 +209,6 @@
         
         Point interpolate(Halfedge_const_handle &hh, Vertex_const_handle &vh) {
             assert(!hh->is_fictitious());
-            std::cout << "interpolating" << std::endl;
             Point source = hh->source()->point();
             Point target = hh->target()->point();
             Point p = vh->point();
@@ -235,7 +220,6 @@
             B = CGAL::sqrt(B);
             assert(source.id() != -1);
             assert(target.id() != -1);
-            std::cout << "ids " << source.id() << " " << target.id() << std::endl;
             assert(this->hws.find(source.id()) != hws.end());
             assert(this->hws.find(target.id()) != hws.end());
             auto s = hws.size();
@@ -316,7 +300,6 @@
             CGAL::Segment_2<Kernel> e2 = (i - 1 >= 0 ? p.edge(i - 1) : p.edge(p.edges().size() - 1));
             Kernel::FT res = CGAL::determinant(e2.to_vector(), e1.to_vector());
             if (res < 0) {
-                std::cout << "reflex" << std::endl;
                 np.isReflex() = true;
             }
 
@@ -339,7 +322,6 @@
         for (auto vd_iter = vd_list.begin(); vd_iter != vd_list.end(); ++vd_iter) {
             count += 1;
         }
-     //   std::cout << "count in test: " << count << std::endl;
 
 
         intersectionPoints.clear();
@@ -381,11 +363,9 @@
 
         for (int i = start; i < end; i++) {
             e = this->polygon.edge(i);// *(this->polygon.edges_begin() + i);
-            std::cout << "dividing: edge has ids " << e[0].id() << " " << e.target().id() << " artificial?: " << (e.source().isArtificial() ? "true" : "false") << " " << (e.target().isArtificial() ? "true" : "false") << std::endl;
 
             l = e.supporting_line();
             if (state == ABOVE) {
-               // std::cout << this->polygon.edge(i) << "\n";
                 if (this->intersectionPoints[i].first == nullptr) {
                     projection_insert(upperEdgeList, e);
                     testUpper.push_back(e);
@@ -417,7 +397,6 @@
             else if (state == BELOW) {
 
                 if (this->intersectionPoints[i].first != nullptr) {
-                 //   std::cout << *this->intersectionPoints[i].first << "\n";
 
                     Point low(l.x_at_y(ly), ly);
                     low.isArtificial() = true;
@@ -466,12 +445,8 @@
         this->lowerUpperHelper(this->leftIntersectionIndex, this->intersectionPoints.size(), artCounter, ly, uy, testLower, testUpper);
         this->lowerUpperHelper(0, this->leftIntersectionIndex, artCounter, ly, uy, testLower, testUpper);
 
-     //   std::cout << "trgethsrh";
-        std::cout << "size is " << lowerEdgeList.size() << std::endl;
-        std::cout << "number of homogeneous: " << this->hws.size() << std::endl;
         Arrangement testArrLower;
         insert(testArrLower, testLower.begin(), testLower.end());
-        std::cout << "There are " << artCounter << " artificial vertices";
         Arrangement testArrUpper;
         insert(testArrUpper, testUpper.begin(), testUpper.end());
       //  CGAL::draw(testArrLower);
@@ -493,7 +468,6 @@
         if (p.y() == 0) {
             this->queryPoint = Point(p.x(), p.y() + 1);
             this->moveQueryPoint = new Transformation(CGAL::TRANSLATION, Vector(0, 1));
-            std::cout << "moving query point" << std::endl;
             this->polygon = CGAL::transform(*this->moveQueryPoint, this->polygon);
         }
         else {
@@ -504,11 +478,9 @@
         rotateForProj = new Transformation(CGAL::ROTATION, 1, 0);
 
         auto x = this->polygon.vertex(0);
-        std::cout << "query point: " << this->queryPoint << "\n";
 
         //  rotate polygon if horizontal line intersects a vertex
         while (this->isPointHorizontalWithVertex(this->queryPoint)) {
-            std::cout << "Polygon has vertex on horizontal line through " << this->queryPoint << "\n";
             this->polygon = CGAL::transform(*translateToOrigin, this->polygon);
             this->polygon = CGAL::transform(*rotate, this->polygon);
             this->polygon = CGAL::transform(*translateBack, this->polygon);
@@ -534,7 +506,6 @@
         }
         CGAL::draw(region);
         while (k > 0) {
-            std::cout << "finding " << k << "-visibility region" << std::endl;
             findNextRegion();
             region.clear();
             for (Halfedge_const_handle h : nextRegionHalfedges) {
@@ -637,7 +608,6 @@
            
             if (vd_iter->first->point().isArtificial()) {
                 artCounter++;
-                std::cout << "ARTIFICIAL" << std::endl;
             }
             Vertex_const_handle vertex = vd_iter->first;
             if (vertex->point().isArtificial()) {
@@ -651,12 +621,10 @@
             bool has_vh = false;
             bool has_hh = false;
 
-            std::cout << " feature below: " << std::endl;
             //none intersect a vertex in current example
             if (!(has_hh = CGAL::assign(hh, curr.first)) && !(has_vh = CGAL::assign(vh, curr.first))) { // nothing below
 
                 if (!(has_hh = CGAL::assign(hh, curr.second)) && !(has_vh = CGAL::assign(vh, curr.second))) { // nothing above
-                    std::cout << "nothing above or below" << std::endl;
                     continue;
                 }
 
@@ -675,7 +643,6 @@
                 Halfedge_const_handle hh2;
                 Face_const_handle fh2;
                 if (!(has_hh2 = CGAL::assign(hh2, curr.second)) && !(has_vh2 = CGAL::assign(vh2, curr.second))) { // nothing above
-                    std::cout << "nothing above" << std::endl;
                     if (has_hh) { // nothing above, edge below
                         inv_projection_insert(hh, vertex);
                     }
@@ -705,7 +672,6 @@
         testPolygon.clear();
         int artCounter = 0;
         CGAL::insert(lowerArr, lowerEdgeList.begin(), lowerEdgeList.end());
-        std::cout << "size of lowerArr: " << lowerEdgeList.size() << "\n";
 
         CGAL::draw(lowerArr);
 
@@ -737,7 +703,6 @@
 
         radialHelper(p, lowerArr, artCounter);
         radialHelper(p, upperArr, artCounter);
-        std::cout << "done" << std::endl;
       //  CGAL::draw(testPolygon);
     }
 
@@ -763,7 +728,6 @@
         Point p1 = interpolate(bhh, qvh);
         Point p2 = interpolate(uhh, qvh);
         Segment s(p1, p2);
-       // std::cout << s << std::endl;
        assert(!s.is_degenerate());
       
         this->radialList.push_back(s);
@@ -955,13 +919,11 @@
         Halfedge_handle edge = this->zeroVisEdge;
    
         do {
-            std::cout << "reg vis : [" << edge->source()->point() << " -> " << edge->target()->point() << "]" << std::endl;
             int sid = edge->source()->point().id();
             int tid = edge->target()->point().id();
             Segment curr = edge->curve();
             Segment nex = edge->next()->curve();
             if (curr.direction() == nex.direction()) {
-                std::cout << "same dir as next edge" << std::endl;
             }
      
             Segment e = (Segment)edge->curve();
@@ -969,7 +931,6 @@
             testing[edge] = 1;
             nextRegionHalfedges.push_back(edge);
          
-            std::cout << "id is " << edge->source()->point().id() << std::endl;
            /* if (edge->source()->point().id() == -1) {
                 Halfedge_const_handle hh;
                 CGAL::Arr_point_location_result<Arrangement>::Type obj2 = inputPolyPointLocation.locate(edge->source()->point());
@@ -1048,7 +1009,6 @@
         }
         else {
             Halfedge_const_handle last = nextRegionHalfedges.back();
-            //   std::cout << "last edge target " << last->target()->point() << ", edge target " << edge->target()->point() << std::endl;
             if (toInsert->target()->point() != last->target()->point()) {
                 nextRegionHalfedges.push_back(toInsert);
             }
@@ -1070,7 +1030,6 @@
             next = next->next();
             count += 1;
         }
-        std::cout << "added " << count << " edges" << std::endl;
 
     }
 
@@ -1093,13 +1052,11 @@
     template<class Kernel>
     typename K_visibility_region<Kernel>::Halfedge_handle  K_visibility_region<Kernel>::extendRadial(Halfedge_const_handle edge) {
         Point target = edge->target()->point();
-        std::cout << "tip" << std::endl;
         Halfedge_const_handle queryEdge = edge->next();
         Line extender(queryPoint, target);
         Halfedge_handle r;
         Segment nextCurve;
         while (queryEdge != edge) {
-            std::cout << "test";
             //  assert(queryEdge->face() == face);
             nextCurve = queryEdge->curve();
             const auto result = CGAL::intersection(extender, nextCurve);
