@@ -26,10 +26,13 @@
 #include <CGAL/Arr_vertical_decomposition_2.h>
 #include <CGAL/Simple_polygon_visibility_2.h>
 #include <CGAL/Arr_naive_point_location.h>
+#include <vector>
+#include <algorithm>
+#include <array>
+#include <functional>
 
 
-
-#define EPSILON (1.0/1000.0)
+#define EPSILON (1.0/10000000.0)
 
 
 
@@ -80,6 +83,9 @@
     public:
         K_visibility_region(CGAL::Polygon_2<Kernel> p);
         Polygon find_visibility_region(int k, CGAL::Point_2<Kernel> p);
+        void testRadial(CGAL::Point_2<Kernel> p);
+        std::unordered_map<int, int> naiveVertexToEdges;
+        std::unordered_map<int, int> trapVertexToEdges;
 
 
     private:
@@ -120,6 +126,22 @@
             BOTTOM,
             RIGHT
         } SIDE;
+
+        typedef struct {
+            int vertexId;
+            int leftSegId;
+            int rightSegId;
+        } TestRadialEdges;
+
+        struct {
+            bool operator()(TestRadialEdges& a, TestRadialEdges& b) {
+                return a.vertexId < b.vertexId;
+            }
+        } compareTest;
+       
+
+        std::vector<TestRadialEdges> naiveTest;
+        std::vector<TestRadialEdges> linearTest;
 
         typedef struct {
             Vertex_handle vh1;
@@ -185,6 +207,8 @@
        
         Arrangement upperArr;
         Arrangement lowerArr;
+        Arrangement testArrLower;
+        Arrangement testArrUpper;
         Arrangement arr;
         Arrangement RegularVisibilityOutput;
         Halfedge_handle zeroVisEdge;
@@ -231,13 +255,13 @@
             FT sy = source.y() * sourceW;
             FT tx = target.x() * targetW;
             FT ty = target.y() * targetW;
-            assert(polygon.has_on_boundary(Point(sx, sy)));
-            assert(polygon.has_on_boundary(Point(tx, ty)));
+         //   assert(polygon.has_on_boundary(Point(sx, sy)));
+           // assert(polygon.has_on_boundary(Point(tx, ty)));
 
             FT x = sx + a * (tx - sx);
             FT y = sy + a * (ty - sy);
             Point rp(x, y);
-            assert(polygon.has_on_boundary(rp));
+          //  assert(polygon.has_on_boundary(rp));
             return rp;
         }
 
@@ -336,7 +360,7 @@
         int nv = this->polygon.vertices().size();
 
         for (int i = start; i < end; i++) {
-            e = this->polygon.edge(i);// *(this->polygon.edges_begin() + i);
+            e = this->polygon.edge(i);
 
             l = e.supporting_line();
             if (state == ABOVE) {
@@ -350,7 +374,6 @@
                 artCounter++;
                 low.isArtificial() = true;
                 Segment lowSeg(low, e.end());
-                // its only inserting artificial vertices in the list? only articifial have valid ids?
 
                 lowSeg.id() = e.id();
                 projection_insert(lowerEdgeList, lowSeg);
@@ -405,6 +428,8 @@
     void K_visibility_region<Kernel>::getLowerUpper() {
         std::vector<Segment> testLower;
         std::vector<Segment> testUpper;
+        testArrLower.clear();
+        testArrUpper.clear();
         int artCounter = 0;
         int nv = this->polygon.vertices().size();
 
@@ -417,9 +442,7 @@
         this->lowerUpperHelper(this->leftIntersectionIndex, this->intersectionPoints.size(), artCounter, ly, uy, testLower, testUpper);
         this->lowerUpperHelper(0, this->leftIntersectionIndex, artCounter, ly, uy, testLower, testUpper);
 
-        Arrangement testArrLower;
         insert(testArrLower, testLower.begin(), testLower.end());
-        Arrangement testArrUpper;
         insert(testArrUpper, testUpper.begin(), testUpper.end());
     }
 
@@ -506,7 +529,6 @@
         Point lm = *this->polygon.left_vertex();
         Point rm = *this->polygon.right_vertex();
 
-        // Line line(p, Point(p.x() + 1, p.y()));
         Segment line(Point(lm.x() - 1, p.y()), Point(rm.x() + 1, p.y()));
         int numEdges = this->polygon.edges().size();
         this->intersectionPoints.clear(); // clear before incase of multiple calls due to intersection with vertex
@@ -558,10 +580,11 @@
 
     template <class Kernel>
     void K_visibility_region<Kernel>::radialHelper(Point p, Arrangement arr, int& artCounter) {
+#define sid(h) (h->target()->point().id() + h->source()->point().id())
         Vert_decomp_list vd_list;
         CGAL::decompose(arr, std::back_inserter(vd_list));
         for (auto vd_iter = vd_list.begin(); vd_iter != vd_list.end(); ++vd_iter) {
-           
+            int id = vd_iter->first->point().id();
             if (vd_iter->first->point().isArtificial()) {
                 artCounter++;
             }
@@ -586,9 +609,14 @@
 
                 if (has_hh) { // nothing below, edge above
                     inv_projection_insert(hh, vertex);
+                    TestRadialEdges r = {id, -1, sid(hh)};
+                    linearTest.push_back(r);
                 }
                 else { // nothing below, vertex above
-                  //  inv_projection_insert(vh, vertex);
+                    inv_projection_insert(vh, vertex);
+                    TestRadialEdges r = { id, -1, vh->point().id() };
+                    linearTest.push_back(r);
+
                 }
             }
             else { // something below
@@ -601,23 +629,40 @@
                 if (!(has_hh2 = CGAL::assign(hh2, curr.second)) && !(has_vh2 = CGAL::assign(vh2, curr.second))) { // nothing above
                     if (has_hh) { // nothing above, edge below
                         inv_projection_insert(hh, vertex);
+                        TestRadialEdges r = {id, sid(hh), -1};
+                        linearTest.push_back(r);
+
                     }
                     else { // nothing above, vertex below
-                    //    inv_projection_insert(vh, vertex);
+                        inv_projection_insert(vh, vertex);
+                        TestRadialEdges r = { id, vh->point().id(), -1 };
+                        linearTest.push_back(r);
+
                     }
                     continue;
                 }
                 if (has_hh && has_hh2) {
                     inv_projection_insert(hh, hh2, vertex);
+                    TestRadialEdges r = { id, sid(hh), sid(hh2) };
+                    linearTest.push_back(r);
                 }
                 else if (has_vh && has_vh2) {
-                  //  inv_projection_insert(vh, vh2, vertex);
+                    inv_projection_insert(vh, vh2, vertex);
+                    TestRadialEdges r = { id, vh->point().id(),  vh2->point().id() };
+                    linearTest.push_back(r);
+
                 }
                 else if (has_hh && has_vh2) {
-                   // inv_projection_insert(hh, vh2, vertex);
+                    inv_projection_insert(hh, vh2, vertex);
+                    TestRadialEdges r = { id, sid(hh), vh2->point().id() };
+                    linearTest.push_back(r);
+
                 }
                 else if (has_vh && has_hh2) {
-                   // inv_projection_insert(vh, hh2, vertex);
+                    inv_projection_insert(vh, hh2, vertex);
+                    TestRadialEdges r = { id, vh->point().id(), sid(hh2)};
+                    linearTest.push_back(r);
+
                 }
             }
         }
@@ -725,9 +770,14 @@
         Point left, right;
         Segment leftSeg, rightSeg;
         FT leftDist, rightDist;
+        bool rightIsVert, leftIsVert;
+        rightIsVert = false;
+        leftIsVert = false;
+        int leftId, rightId;
         int pid = polygon.vertices().size();
         for (auto v = arr.vertices_begin(); v != arr.vertices_end(); v++) {
             Point vertex = v->point();
+            // vertices with id of -1 are 
             if (vertex.id() == -1) {
                 continue;
             }
@@ -735,6 +785,10 @@
             rightDist = FT(100000000);
             bool foundLeft = false;
             bool foundRight = false;
+            rightIsVert = false;
+            leftIsVert = false;
+            leftId = -1;
+            rightId = -1;
             bool isVertical = vertex.x() == p.x();
             bool side = isVertical ? vertex.y() < p.y() : vertex.x() < p.x();
             Line ray(vertex, p);
@@ -770,6 +824,13 @@
                         left = intPoint;
                         leftDist = dist;
                         leftSeg = edge;
+                        if (intPoint == edge.source() || intPoint == edge.target()) {
+                            leftIsVert = true;
+                            leftId = vertex.id();
+                        }
+                        else {
+                            leftIsVert = false;
+                        }
                     }
                     
                 }
@@ -780,6 +841,13 @@
                         right = intPoint;
                         rightDist = dist;
                         rightSeg = edge;
+                        if (intPoint == edge.source() || intPoint == edge.target()) {
+                            rightIsVert = true;
+                            rightId = vertex.id();
+                        }
+                        else {
+                            rightIsVert = false;
+                        }
                     }
                 }
             }
@@ -812,6 +880,9 @@
                 intersectionList[sid(leftSeg)].push_back(left);
                // insert(arr, Segment(left, vertex));
                 radialList.push_back(Segment(left, right));
+                TestRadialEdges r = { vertex.id(), leftIsVert ? leftId: sid(leftSeg), rightIsVert ? rightId: sid(rightSeg) };
+                naiveTest.push_back(r);
+                
               //  CGAL::draw(arr);
               //  insert_non_intersecting_curve(arr, Segment(right, vertex));
 
@@ -832,6 +903,9 @@
 
                 radialList.push_back(Segment(vertex, right));
                 intersectionList[sid(rightSeg)].push_back(right);
+                TestRadialEdges r = { vertex.id(), -1, rightIsVert ? rightId : sid(rightSeg) };
+                naiveTest.push_back(r);
+
               /*  if (isVertical ? vertex.y() > p.y() : vertex.x() > p.x()) {
                     radialList.push_back(Segment(p, vertex));
                 }*/
@@ -848,6 +922,9 @@
 
                 radialList.push_back(Segment(left, vertex));
                 intersectionList[sid(leftSeg)].push_back(left);
+                TestRadialEdges r = { vertex.id(), leftIsVert ? leftId : sid(leftSeg), -1};
+                naiveTest.push_back(r);
+
                /* if (isVertical ? vertex.y() < p.y() : vertex.x() < p.x()) {
                     radialList.push_back(Segment(p, vertex));
                 }*/
@@ -992,7 +1069,7 @@
     }
 
 
-    //only target matters?
+    // only target matters?
     // if base away from qp, add edge->next()->next()
     // unless edge->next->face != 
     // stop when target of newly inserted (into regionnlisy) edge is either reflex, or source of stop point
@@ -1068,6 +1145,10 @@
         Halfedge_handle start = RegularVisibilityOutput.halfedges_begin()->twin(); // calling twin ensures its a halfedge_handle
         start = start->face()->is_unbounded() ? start->twin() : start;
         Halfedge_handle edge = start;
+        /*
+         * find halfedge that belongs to original polygon
+         * guarenteed to be at least one full edge of original polygon that is 0-visible from query point
+       */
         do {
             if ((sid = edge->source()->point().id()) >= 0 && (tid = edge->target()->point().id()) >= 0) {
                 break;
@@ -1083,10 +1164,8 @@
         
         Halfedge_iterator hit = this->arr.halfedges_begin();
         Halfedge_handle hh = hit->next()->prev();
-        /*
-        * find halfedge that belongs to original polygon
-        * guarenteed to be at least one full edge of original polygon that is 0-visible from query point
-        */
+       
+        // find halfedge from 0-vis region in full arrangement
         for (hit = this->arr.halfedges_begin(); hit != this->arr.halfedges_end(); hit++) {
             if (hit->source()->point().id() == sid && hit->target()->point().id() == tid) {
                 this->zeroVisEdge = hit->twin()->twin();
@@ -1095,6 +1174,9 @@
         }
     }
 
+    /*
+    * inserts a tight bounding box into the arrangement
+    */
     template<class Kernel>
     void K_visibility_region<Kernel>::addBoundingBox() {
         
@@ -1165,11 +1247,11 @@
     }
 
     
-#define targetStopCoord(s, h) ((s == TOP || s == BOTTOM) ? h->target()->point().x() : h->target()->point().y())
-#define targetCollinearCoord(s, h)  ((s == TOP || s == BOTTOM) ? h->target()->point().y() : h->target()->point().x())
+
     template<class Kernel>
     void K_visibility_region<Kernel>::insertBbox(FT val, SIDE d, FT stopVal1, FT stopVal2, Vertex_handle corner1, Vertex_handle corner2) {
-
+#define targetStopCoord(s, h) ((s == TOP || s == BOTTOM) ? h->target()->point().x() : h->target()->point().y())
+#define targetCollinearCoord(s, h)  ((s == TOP || s == BOTTOM) ? h->target()->point().y() : h->target()->point().x())
         // find halfedge that has source().y() (or .x()) equal to val
         Halfedge_handle h = arr.halfedges_begin()->twin();
         for (auto hh = arr.halfedges_begin(); hh != arr.halfedges_end(); hh++) {
@@ -1236,3 +1318,38 @@
             lastV = h->source();
         }
     }
+
+    template<class Kernel>
+    void K_visibility_region<Kernel>::testRadial(CGAL::Point_2<Kernel> p) {
+        linearTest.clear();
+        naiveTest.clear();
+        this->queryPoint = Point(p.x(), p.y());
+        while (this->isPointHorizontalWithVertex(this->queryPoint)) {
+            this->polygon = CGAL::transform(*translateToOrigin, this->polygon);
+            this->polygon = CGAL::transform(*rotate, this->polygon);
+            this->polygon = CGAL::transform(*translateBack, this->polygon);
+        }
+        getLowerUpper();
+        CGAL::draw(testArrLower);
+        CGAL::draw(testArrUpper);
+        getRadial(this->queryPoint);
+        std::sort(linearTest.begin(), linearTest.end(), compareTest);
+
+        this->arr.clear();
+       // addBoundingBox();
+        insert_non_intersecting_curves(arr, this->polygon.edges_begin(), this->polygon.edges_end());
+        naiveRadial(this->queryPoint);
+        std::sort(naiveTest.begin(), naiveTest.end(), compareTest);
+        
+        std::cout << "linear has size " << linearTest.size() << " naive has size " << naiveTest.size() << std::endl;
+        int M = std::min(linearTest.size(), naiveTest.size());
+        for (int i = 0; i < M; i++) {
+            std::cout << "Naive: Vertex with id " << naiveTest[i].vertexId << " intersection edges " << naiveTest[i].leftSegId << ", " << naiveTest[i].rightSegId << std::endl;
+            std::cout << "Linear: Vertex with id " << linearTest[i].vertexId << " intersection edges " << linearTest[i].leftSegId << ", " << linearTest[i].rightSegId << std::endl;
+            std::cout << std::endl;
+
+
+        }
+
+    }
+    
