@@ -37,9 +37,17 @@ public:
     }
 
     std::string toString() {
+        return this->toString2();
         std::string s = "";
         std::ostringstream  o;
         o << "[(" << this->hx() << " " << this->hy() << " " << this->hw() << ")" << " id: " << this->id() << " artificial: " << (this->isArtificial() ? "true" : "false") << "]";
+        return o.str();
+    }
+
+    std::string toString2() {
+        std::string s = "";
+        std::ostringstream o;
+        o << "[( " << this->x() << " " << this->y() << "), id: " << this->id() << "]";
         return o.str();
     }
 
