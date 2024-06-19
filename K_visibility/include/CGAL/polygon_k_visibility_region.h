@@ -88,6 +88,70 @@
         std::unordered_map<int, int> trapVertexToEdges;
         bool disableDraw = false;
 
+        Segment getWall(Vertex_const_handle vh, Halfedge_const_handle hh) {
+            Line l = ((Segment)hh->curve()).supporting_line();
+            FT y = l.y_at_x(vh->point().hx());
+            FT x = vh->point().hx();
+            return Segment(vh->point(), Point(x, y));
+        }
+
+        Segment getWall(Vertex_const_handle vh1, Vertex_const_handle vh2) {
+            return Segment(vh1->point(), vh2->point());
+        }
+
+        template<typename Kernel>
+        void testDecompose(CGAL::Polygon_2<Kernel> p) {
+            Polygon poly;
+            for (auto v : p.vertices()) {
+                poly.push_back(Point(v.x(), v.y()));
+            }
+            Vert_decomp_list vd_list;
+            Arrangement tarr;
+            insert(tarr, poly.edges_begin(), poly.edges_end());
+            CGAL::decompose(tarr, std::back_inserter(vd_list));
+            for (auto vd_iter = vd_list.begin(); vd_iter != vd_list.end(); ++vd_iter) {
+                const Object_pair& curr = vd_iter->second;
+                std::cout << "Vertex (" << vd_iter->first->point() << ") : ";
+                Vertex_const_handle vh;
+                Halfedge_const_handle hh;
+                Face_const_handle fh;
+                std::cout << " feature below: ";
+                if (CGAL::assign(hh, curr.first)) {
+                    std::cout << '[' << hh->curve() << ']';
+                    insert(tarr, getWall(vd_iter->first, hh));
+
+                }
+                else if (CGAL::assign(vh, curr.first)) {
+                    std::cout << '(' << vh->point() << ')';
+                    insert(tarr, getWall(vd_iter->first, vh));
+                }
+                else if (CGAL::assign(fh, curr.first)) {
+                    std::cout << "NONE";
+                }
+                else {
+                    std::cout << "EMPTY";
+                }
+
+                std::cout << "   feature above: ";
+                if (CGAL::assign(hh, curr.second)) {
+                    std::cout << '[' << hh->curve() << "]\n";
+                    insert(tarr, getWall(vd_iter->first, hh));
+
+                }
+                else if (CGAL::assign(vh, curr.second)) {
+                    std::cout << '(' << vh->point() << ")\n";
+                    insert(tarr, getWall(vd_iter->first, vh));
+                }
+                else if (CGAL::assign(fh, curr.second)) {
+                    std::cout << "NONE\n";
+                }
+                else {
+                    std::cout << "EMPTY\n";
+                }
+            }
+            testDraw(tarr, true);
+        }
+
 
     private:
 
