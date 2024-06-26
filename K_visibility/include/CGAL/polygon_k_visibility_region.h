@@ -32,7 +32,7 @@
 #include <functional>
 
 
-#define EPSILON (1.0/1000.0)
+#define EPSILON (1.0/10.0)
 
 
 
@@ -295,7 +295,7 @@
             assert(hws.find(p.id()) != hws.end());
             //  FT nz = y - this->queryPoint.y();
         //    FT nz = CGAL::inverse(this->queryPoint.y()) * y - CGAL::inverse(this->queryPoint.y()) * this->hws[p.id()];
-            FT w = p.y() * CGAL::inverse(queryPoint.y()) - CGAL::inverse(queryPoint.y()) * w2;
+            FT w = y * CGAL::inverse(queryPoint.y()) - CGAL::inverse(queryPoint.y()) * w2;
             
             Point P(x/w, y/w, 1);
             P.isArtificial() = p.isArtificial();
@@ -640,8 +640,8 @@
          
         }
 
-        testDraw(testArrLower);
-        testDraw(testArrUpper);   
+        testDraw(testArrLower, true);
+        testDraw(testArrUpper, true);   
 
         int artCounter = 0;
         int nv = this->polygon.vertices().size();
@@ -901,10 +901,10 @@
         int artCounter = 0;
         CGAL::insert(lowerArr, lowerEdgeList.begin(), lowerEdgeList.end());
 
-        testDraw(lowerArr);
+        testDraw(lowerArr, true);
 
         CGAL::insert(upperArr, upperEdgeList.begin(), upperEdgeList.end());
-       testDraw(upperArr);
+       testDraw(upperArr, true);
 
         std::vector<Segment> el2;
         std::vector<Segment> ul2;
@@ -1582,14 +1582,14 @@
         insert(t, polygon.edges_begin(), polygon.edges_end());
         insert(t, Segment(Point(queryPoint.x(), queryPoint.y()), Point(queryPoint.x(), queryPoint.y() - 1)));
         testDraw(t);
-     /*   testDraw(testArrLower);
-        testDraw(testArrUpper);*/
+        testDraw(testArrLower, true);
+        testDraw(testArrUpper, true);
         getRadial(this->queryPoint);
         insert(arr, this->radialList.begin(), this->radialList.end());
         insert(arr, Segment(Point(queryPoint.x(), queryPoint.y() - 1), Point(queryPoint.x(), queryPoint.y() - 10)));
         insert(arr, Segment(Point(queryPoint.x(), queryPoint.y() + 1), Point(queryPoint.x(), queryPoint.y() + 5)));
 
-        testDraw(arr, true);
+      //  testDraw(arr, true);
         std::sort(linearTest.begin(), linearTest.end(), compareTest);
         
         this->arr.clear();

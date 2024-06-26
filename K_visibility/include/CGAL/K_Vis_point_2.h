@@ -47,7 +47,7 @@ public:
     std::string toString2() {
         std::string s = "";
         std::ostringstream o;
-        o << "[( " << this->x() << " " << this->y() << "), id: " << this->id() << "]";
+        o << "[( " << this->hx() << " " << this->hy() << "), id: " << this->id() << "]";
         return o.str();
     }
 
