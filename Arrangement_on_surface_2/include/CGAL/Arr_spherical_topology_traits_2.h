@@ -314,7 +314,7 @@ public:
   // defining a type that inherits from the template we need to alias.  However,
   // the non-C++11 code requires the (re)definition of all constructors of the
   // derived class. The non-C++11 code follows the commented out C++11 code.
-  // When we move to C++11 we can use the more elgant code.
+  // When we move to C++11 we can use the more elegant code.
   // Type definition for the construction surface-sweep visitor.
   template <typename Evt, typename Crv>
   struct Construction_helper :
@@ -506,7 +506,7 @@ public:
    * \pre The curve has a boundary condition in either x or y.
    * \return An object that contains the curve end.
    */
-  boost::optional<boost::variant<Vertex*, Halfedge*> >
+  std::optional<std::variant<Vertex*, Halfedge*> >
   place_boundary_vertex(Face* f,
                         const X_monotone_curve_2& xc,
                         Arr_curve_end ind,
@@ -538,7 +538,7 @@ public:
    * \pre The curve end is incident to the boundary.
    * \return An object that contains the curve end.
    */
-  boost::variant<Vertex*, Halfedge*, Face*>
+  std::variant<Vertex*, Halfedge*, Face*>
   locate_curve_end(const X_monotone_curve_2& xc, Arr_curve_end ce,
                    Arr_parameter_space ps_x,
                    Arr_parameter_space ps_y);

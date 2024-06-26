@@ -1,7 +1,7 @@
 # Created by the script cgal_create_CMakeLists
 # This is the CMake script for compiling a set of CGAL applications.
 
-cmake_minimum_required(VERSION 3.1...3.23)
+cmake_minimum_required(VERSION 3.12...3.29)
 project(Surface_mesh_approximation_Tests)
 
 # CGAL and its components
@@ -14,6 +14,9 @@ if(NOT TARGET CGAL::Eigen3_support)
   message("NOTICE: This project requires Eigen 3.1 (or greater), and will not be compiled.")
   return()
 endif()
+
+create_single_source_cgal_program("vsa_border_test.cpp")
+target_link_libraries(vsa_border_test PUBLIC CGAL::Eigen3_support)
 
 create_single_source_cgal_program("vsa_class_interface_test.cpp")
 target_link_libraries(vsa_class_interface_test PUBLIC CGAL::Eigen3_support)

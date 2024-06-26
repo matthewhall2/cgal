@@ -145,7 +145,7 @@ Delaunay triangulation instead of an adaptive octree.
 
 \tparam Gt Geometric traits class.
 
-\cgalModels `ImplicitFunction`
+\cgalModels{ImplicitFunction}
 
 */
 template <class Gt>
@@ -260,7 +260,10 @@ private:
 
     Cell_handle get() const
     {
-      return Triangulation_data_structure::Cell_range::s_iterator_to(*m_cell);
+      if(m_cell == nullptr)
+        return {};
+      else
+        return Triangulation_data_structure::Cell_range::s_iterator_to(*m_cell);
     }
     void set (Cell_handle ch) { m_cell = ch.operator->(); }
   };

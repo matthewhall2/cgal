@@ -91,7 +91,7 @@ the intersection tests and intersection computations
 for polyhedral boundary surfaces. This parameter has to be instantiated
 with a model of the concept `IntersectionGeometricTraits_3`.
 
-\cgalModels `MeshDomainWithFeatures_3`
+\cgalModels{MeshDomainWithFeatures_3}
 
 \sa `CGAL::make_mesh_3()`
 \sa `CGAL::Mesh_domain_with_polyline_features_3<MD>`
@@ -524,13 +524,13 @@ public:
     Is_in_domain(const Polyhedral_complex_mesh_domain_3& domain)
       : r_domain_(domain) {}
 
-    boost::optional<AABB_primitive_id> shoot_a_ray_1(const Ray_3 ray) const {
+    std::optional<AABB_primitive_id> shoot_a_ray_1(const Ray_3 ray) const {
       return r_domain_.bounding_aabb_tree_ptr()->
         first_intersected_primitive(ray);
     }
-
-#if USE_ALL_INTERSECTIONS
-    boost::optional<AABB_primitive_id> shoot_a_ray_2(const Ray_3 ray) const {
+#define CGAL_USE_ALL_INTERSECTIONS 0
+#if CGAL_USE_ALL_INTERSECTIONS
+    std::optional<AABB_primitive_id> shoot_a_ray_2(const Ray_3& ray) const {
       const Point_3& p = ray.source();
       typedef typename AABB_tree::
         template Intersection_and_primitive_id<Ray_3>::Type Inter_and_prim;
@@ -538,25 +538,25 @@ public:
       r_domain_.bounding_aabb_tree_ptr()->
         all_intersections(ray, std::back_inserter(all_intersections));
       if(all_intersections.empty())
-        return boost::none;
+        return std::nullopt;
       else {
         for(const Inter_and_prim& i_p: all_intersections) {
-          if(boost::get<Point_3>( &i_p.first) == 0) return AABB_primitive_id();
+          if(std::get_if<Point_3>( &i_p.first) == 0) return AABB_primitive_id();
         }
         auto it = std::min_element
           (all_intersections.begin(), all_intersections.end(),
            [p](const Inter_and_prim& a,
                const Inter_and_prim& b)
            {
-             const Point_3& pa = boost::get<Point_3>(a.first);
-             const Point_3& pb = boost::get<Point_3>(b.first);
+             const Point_3& pa = std::get<Point_3>(a.first);
+             const Point_3& pb = std::get<Point_3>(b.first);
              return compare_distance_to_point(p, pa, pb)
              == CGAL::SMALLER;
            });
         return it->second;
       }
     }
-#endif // USE_ALL_INTERSECTIONS
+#endif // CGAL_USE_ALL_INTERSECTIONS
 
     Subdomain operator()(const Point_3& p) const {
       if(r_domain_.bounding_aabb_tree_ptr() == 0) return Subdomain();
@@ -578,15 +578,14 @@ public:
 
         const Ray_3 ray_shot = ray(p, vector(CGAL::ORIGIN,*random_point));
 
-#define USE_ALL_INTERSECTIONS 0
-#if USE_ALL_INTERSECTIONS
-        boost::optional<AABB_primitive_id> opt = shoot_a_ray_2(ray_shot);
+#if CGAL_USE_ALL_INTERSECTIONS
+        std::optional<AABB_primitive_id> opt = shoot_a_ray_2(ray_shot);
 #else // first_intersected_primitive
-        boost::optional<AABB_primitive_id> opt = shoot_a_ray_1(ray_shot);
+        std::optional<AABB_primitive_id> opt = shoot_a_ray_1(ray_shot);
 #endif // first_intersected_primitive
         // for(int i = 0; i < 20; ++i) {
         //   const Ray_3 ray_shot2 = ray(p, vector(CGAL::ORIGIN,*random_point));
-        //   boost::optional<AABB_primitive_id> opt2 = shoot_a_ray_1(ray_shot2);
+        //   std::optional<AABB_primitive_id> opt2 = shoot_a_ray_1(ray_shot2);
         //   if(opt != opt2) {
         //     if(!opt  && *opt2 == 0) continue;
         //     if(!opt2 && *opt  == 0) continue;
@@ -617,7 +616,11 @@ public:
             return pair.second == 0 ?
               Subdomain() :
               Subdomain(Subdomain_index(pair.second));
-          default: /* COPLANAR */ continue; // loop
+          default: /* COPLANAR */
+            if (!triangle.has_on(p))
+              continue; // loop
+            else
+              return Subdomain(Subdomain_index((std::max)(pair.first,pair.second))); // make a canonical choice
           } // end switch on the orientation
         } // opt
       } // end while(true)
@@ -994,6 +997,8 @@ add_featured_edges_to_graph(const Polyhedron_type& p,
         g_copy[pair.first].insert(get(fpm, face(he,p)));
       }
     }
+    else
+      std::cout << "self loop ignored at point " << get(vpm, source(e, graph)) << std::endl;
   }
 
 #if CGAL_MESH_3_PROTECTION_DEBUG & 2

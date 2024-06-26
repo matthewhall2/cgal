@@ -25,7 +25,7 @@
 #include <CGAL/enum.h>
 #include <CGAL/number_utils.h>
 #include <CGAL/AABB_tree.h>
-#include <CGAL/AABB_traits.h>
+#include <CGAL/AABB_traits_3.h>
 #include <CGAL/is_streamable.h>
 #include <CGAL/Real_timer.h>
 #include <CGAL/property_map.h>
@@ -37,7 +37,7 @@
 #include <algorithm>
 #include <type_traits>
 
-#include <boost/variant.hpp>
+#include <variant>
 #include <memory>
 
 namespace CGAL {
@@ -524,7 +524,7 @@ whose endpoints are the added corners.
 
 \tparam MD is the type of the domain which is extended. It has to be a model of the `MeshDomain_3` concept.
 
-\cgalModels `MeshDomainWithFeatures_3`
+\cgalModels{MeshDomainWithFeatures_3}
 
 \sa `MeshPolyline_3`
 \sa `CGAL::Polyhedral_mesh_domain_3<Polyhedron,IGT>`
@@ -767,22 +767,22 @@ public:
    * where lies a vertex with dimension 2 and index `index`.
    */
   Surface_patch_index surface_patch_index(const Index& index) const
-  { return boost::get<Surface_patch_index>(index); }
+  { return Mesh_3::internal::get_index<Surface_patch_index>(index); }
 
   /**
    * Returns the index of the subdomain containing a vertex
    *  with dimension 3 and index `index`.
    */
   Subdomain_index subdomain_index(const Index& index) const
-  { return boost::get<Subdomain_index>(index); }
+  { return Mesh_3::internal::get_index<Subdomain_index>(index); }
 
   /// returns a `Curve_index` from an `Index`
   Curve_index curve_index(const Index& index) const
-  { return boost::get<Curve_index>(index); }
+  { return Mesh_3::internal::get_index<Curve_index>(index); }
 
   /// returns a `Corner_index` from an `Index`
   Corner_index corner_index(const Index& index) const
-  { return boost::get<Corner_index>(index); }
+  { return Mesh_3::internal::get_index<Corner_index>(index); }
 
   /// @cond DEVELOPERS
 #ifndef CGAL_NO_DEPRECATED_CODE
@@ -848,8 +848,8 @@ private:
     GT,
     typename Edges::const_iterator> Curves_primitives;
 
-  typedef CGAL::AABB_traits<GT,
-                            Curves_primitives> AABB_curves_traits;
+  typedef CGAL::AABB_traits_3<GT,
+                              Curves_primitives> AABB_curves_traits;
 
   Corners corners_;
   Corners_tmp_incidences corners_tmp_incidences_;

@@ -17,7 +17,7 @@
 #include <CGAL/Kernel_traits.h>
 #include <CGAL/property_map.h>
 
-#include <boost/cstdint.hpp>
+#include <cstdint>
 #include <boost/range/value_type.hpp>
 
 #include <iostream>
@@ -201,7 +201,7 @@ public:
 
   void read_ascii(std::istream& stream, double& t) const
   {
-    if(!(stream >> iformat(t)))
+    if(!(stream >> IO::iformat(t)))
       stream.clear(std::ios::badbit);
   }
 

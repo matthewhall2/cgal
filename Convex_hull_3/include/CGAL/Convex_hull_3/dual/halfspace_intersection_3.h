@@ -26,7 +26,9 @@
 #include <CGAL/assertions.h>
 #include <CGAL/boost/graph/Euler_operations.h>
 // For interior_polyhedron_3
+#ifndef CGAL_CH3_DUAL_WITHOUT_QP_SOLVER
 #include <CGAL/Convex_hull_3/dual/halfspace_intersection_interior_point_3.h>
+#endif
 #include <CGAL/Number_types/internal/Exact_type_selector.h>
 
 #include <unordered_map>
@@ -66,7 +68,7 @@ namespace CGAL
               // Typedefs for intersection
               typedef typename Kernel::Plane_3 Plane_3;
               typedef typename Kernel::Line_3 Line_3;
-              typedef boost::optional< boost::variant< Point_3,
+              typedef std::optional< std::variant< Point_3,
                                                        Line_3,
                                                        Plane_3 > > result_inter;
 
@@ -96,10 +98,10 @@ namespace CGAL
                 result_inter result = CGAL::intersection(pp1, pp2, pp3);
                 CGAL_assertion_msg(bool(result),
                                    "halfspace_intersection_3: no intersection");
-                CGAL_assertion_msg(boost::get<Point_3>(& *result) != nullptr,
+                CGAL_assertion_msg(std::get_if<Point_3>(& *result) != nullptr,
                                    "halfspace_intersection_3: intersection is not a point");
 
-                const Point_3* pp = boost::get<Point_3>(& *result);
+                const Point_3* pp = std::get_if<Point_3>(& *result);
 
                 // Primal vertex associated to the current dual plane
                 Point_3 ppp(origin.x() + pp->x(),
@@ -227,7 +229,11 @@ namespace CGAL
     template <class PlaneIterator, class Polyhedron>
     void halfspace_intersection_3 (PlaneIterator begin, PlaneIterator end,
                                    Polyhedron &P,
-                                   boost::optional<typename Kernel_traits<typename std::iterator_traits<PlaneIterator>::value_type>::Kernel::Point_3> origin = boost::none) {
+                                   std::optional<typename Kernel_traits<typename std::iterator_traits<PlaneIterator>::value_type>::Kernel::Point_3> origin
+#ifndef CGAL_CH3_DUAL_WITHOUT_QP_SOLVER
+                                   = std::nullopt
+#endif
+    ) {
         // Checks whether the intersection is a polyhedron
         CGAL_assertion_msg(Convex_hull_3::internal::is_intersection_dim_3(begin, end), "halfspace_intersection_3: intersection not a polyhedron");
 
@@ -238,11 +244,13 @@ namespace CGAL
 
         // if a point inside is not provided find one using linear programming
         if (!origin) {
+#ifndef CGAL_CH3_DUAL_WITHOUT_QP_SOLVER
           // find a point inside the intersection
           origin = halfspace_intersection_interior_point_3(begin, end);
+#endif
 
-          CGAL_assertion_msg(origin!=boost::none, "halfspace_intersection_3: problem when determining a point inside the intersection");
-          if (origin==boost::none)
+          CGAL_assertion_msg(origin!=std::nullopt, "halfspace_intersection_3: problem when determining a point inside the intersection");
+          if (origin==std::nullopt)
             return;
         }
 
@@ -272,7 +280,7 @@ namespace CGAL
   void halfspace_intersection_3 (PlaneIterator begin, PlaneIterator end,
                                  Polyhedron &P,
                                  typename Kernel_traits<typename std::iterator_traits<PlaneIterator>::value_type>::Kernel::Point_3 const& origin) {
-    halfspace_intersection_3(begin, end , P, boost::make_optional(origin));
+    halfspace_intersection_3(begin, end , P, std::make_optional(origin));
   }
   #endif
 } // namespace CGAL
