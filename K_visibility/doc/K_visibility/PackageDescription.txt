@@ -11,13 +11,16 @@
 \cgalPkgPicture{pkg-small.png}
 
 \cgalPkgSummaryBegin
-\cgalPkgAuthors{PACKAGE AUTHOR}
-\cgalPkgDesc{The package provides ... }
+\cgalPkgAuthors{Matthew Hall}
+\cgalPkgDesc{This chapter provides an algorithm for calculating the k-visibility region of a polygon with no holes.}
 \cgalPkgManuals{Chapter_K_Visibility,PkgKvisibility}
 \cgalPkgSummaryEnd
 
 \cgalPkgShortInfoBegin
 \cgalPkgSince{6.1}
+\cgalPkgDependsOn{\ref PkgArrangementOnSurface2}
+\cgalPkgDependsOn{\ref PkgVisibility2}
+
 \cgalPkgBib{cgal:x-x}
 \cgalPkgLicense{\ref licensesGPL "GPL"}
 \cgalPkgShortInfoEnd
@@ -26,8 +29,6 @@
 
 \cgalClassifedRefPages
 
-\cgalCRPSection{Functions}
-- `CGAL::watch_tower_1_5()`
-
-
+\cgalCRPSection{Classes}
+- `CGAL::K_visibility_2<Kernel>`
 */

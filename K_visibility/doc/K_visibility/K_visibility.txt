@@ -5,23 +5,26 @@ namespace CGAL {
 \anchor Chapter_K_Visibility
 
 \cgalAutoToc
-\author AUTHOR1, AUTHOR2, and AUTHOR3
+\author Matthew Hall
 
-This chapter describes the ...
+\section k_visibiliy_intro Introduction
+This package provides a method of calculating the k-visibility region \f $V_k \f$ of a point in a polygonal region with
+no holes. This is similar to the regular visibility (0-visibility), but where the guard can see through up to k
+walls in any direction.
 
-\section secmydefinitions Definitions
+\subsection k_vis_defs Definitions
+Given two points \f $p \f$ and \f $q \f$ in a polygon \f $P \f$, they are visibilty to eachother if the interior of the segment \f $\overline{pq} \f$ does not intersect the boundary of \f $P\f$.
+This is also called the 0-visibility region \f $V_0\f$.
+These points are said to be k-visible to eachother if the interior of \f $\overline{pq}\f$ intersects the boundary of \f $P\f$ at most \f$k\f$ times. 
 
-Section on definitions here ...
-
-\section secmyexamples Examples
-
-\subsection myFirstExample First Example
-
-The following example shows ...
-
-\cgalFigureBegin{figPck,bench.png}
-Left: ...
+\cgalFigureBegin{example-fig, k_vis_example.png}
+Points at various visibility levels. The orange points are 0-visible to eachother, the red are 2-visibile, and the blue are 4-visible. 
 \cgalFigureEnd
+
+\section Algorithm
+The class `K_visibility_2` provides one method `K_visibility_2::find_visibility_region()`.
+Given a \f $k\f$ and a point, it calcuated the visibility polygon in \f $\cgalBigO{kn}\f$ time using \f $\cgalBigO{n}\f$ space,
+where $n$ is the number of vertices.
 
 */
 } /* namespace CGAL */

@@ -32,9 +32,23 @@
 #include <functional>
 
 
-#define EPSILON (1.0/10.0)
+#define EPSILON (1.0/1000.0) 
+
+namespace CGAL {
+/*!
+\ingroup PkgKVisibility2Classes
+
+\brief This class is a model of the concept `Visibility_2` can answer visibility queries within a polygon that may have holes.
 
 
+\details The algorithm does not require preprocessing. It relies on the algorithm of T. Asano \cite ta-aeafvpprh-85 based on angular plane sweep, with a time complexity of \cgalBigO{n \log n} in the number of vertices.
+
+
+\tparam Kernel is the type used to represent the input environment.
+It must be an instance of `CGAL::Arrangement_2`, where its `CGAL::Arrangement_2::Traits_2` must be an instance of
+`CGAL::Arr_segment_traits_2`, or of `CGAL::Arr_non_caching_segment_traits_2`.
+
+*/
 
     template<class Kernel>
     class K_visibility_region {
@@ -81,8 +95,28 @@
 
 
     public:
+    /// @}
+
+/// \name Constructors
+/// @{
+
+
+/*!
+Sets up polygon p for k-visibility calculations.
+*/
         K_visibility_region(CGAL::Polygon_2<Kernel> p);
+/// @}
+
+/// \name Functions
+/// @{
+
+
+/*!
+Given a point \f$p\f$ where the guard is standing, and a \f $k \f$ denoting the number of walls the guard can see through, returns the polygonal region the guard can see.
+*/
         Polygon find_visibility_region(int k, CGAL::Point_2<Kernel> p);
+/// @}
+
         void testRadial(CGAL::Point_2<Kernel> p);
         std::unordered_map<int, int> naiveVertexToEdges;
         std::unordered_map<int, int> trapVertexToEdges;
@@ -1615,3 +1649,4 @@
 
     }
     
+} /* end K_Visibility_2 */

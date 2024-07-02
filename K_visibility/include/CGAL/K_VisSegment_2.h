@@ -1,5 +1,5 @@
-#ifndef MY_SEGMENT_2_H
-#define MY_SEGMENT_2_H
+#ifndef KVIS_SEGMENT_2_H
+#define KVIS_SEGMENT_2_H
 
 #include <boost/config.hpp>
 
@@ -277,4 +277,4 @@ operator>>(std::istream &is, K_VisSegment_2<R> &s)
 
 
 
-#endif // CARTESIAN_SEGMENT_2_H
+#endif // KVIS_SEGMENT_2_H
