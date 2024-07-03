@@ -38,7 +38,7 @@ namespace CGAL {
 /*!
 \ingroup PkgKVisibilityClasses
 
-\brief This class answers k-visibility queries.
+\brief This class answers k-visibility queries in O(kn) time, where n is the number of vertices.
 
 \tparam Kernel is kernel type of the input polygon. Kernel::FT must have a square root.
 
@@ -89,7 +89,6 @@ namespace CGAL {
 
 
     public:
-    /// @}
 
 /// \name Constructors
 /// @{
