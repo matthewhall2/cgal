@@ -36,17 +36,14 @@
 
 namespace CGAL {
 /*!
-\ingroup PkgKVisibility2Classes
+\ingroup PkgKVisibilityClasses
 
-\brief This class is a model of the concept `Visibility_2` can answer visibility queries within a polygon that may have holes.
-
-
-\details The algorithm does not require preprocessing. It relies on the algorithm of T. Asano \cite ta-aeafvpprh-85 based on angular plane sweep, with a time complexity of \cgalBigO{n \log n} in the number of vertices.
+\brief This class answers k-visibility queries.
 
 
-\tparam Kernel is the type used to represent the input environment.
-It must be an instance of `CGAL::Arrangement_2`, where its `CGAL::Arrangement_2::Traits_2` must be an instance of
-`CGAL::Arr_segment_traits_2`, or of `CGAL::Arr_non_caching_segment_traits_2`.
+
+
+\tparam Kernel is the type used to represent the input environment. Kernel::FT must have a square root.
 
 */
 

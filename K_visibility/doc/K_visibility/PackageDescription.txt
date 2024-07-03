@@ -21,7 +21,7 @@
 \cgalPkgDependsOn{\ref PkgArrangementOnSurface2}
 \cgalPkgDependsOn{\ref PkgVisibility2}
 
-\cgalPkgBib{cgal:x-x}
+\cgalPkgBib{hhb-k-visibility}
 \cgalPkgLicense{\ref licensesGPL "GPL"}
 \cgalPkgShortInfoEnd
 
