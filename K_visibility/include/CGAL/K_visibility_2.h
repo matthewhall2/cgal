@@ -106,7 +106,7 @@ Sets up polygon p for k-visibility calculations.
 
 
 /*!
-Given a point \f$p\f$ where the guard is standing, and a \f $k \f$ denoting the number of walls the guard can see through, returns the polygonal region the guard can see.
+Given a point p\ where the guard is standing, and a k \f denoting the number of walls the guard can see through, returns the polygonal region the guard can see.
 */
         Polygon find_visibility_region(int k, CGAL::Point_2<Kernel> p);
 /// @}
