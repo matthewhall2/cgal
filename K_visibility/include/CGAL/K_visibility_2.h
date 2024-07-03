@@ -40,10 +40,7 @@ namespace CGAL {
 
 \brief This class answers k-visibility queries.
 
-
-
-
-\tparam Kernel is the type used to represent the input environment. Kernel::FT must have a square root.
+\tparam Kernel is kernel type of the input polygon. Kernel::FT must have a square root.
 
 */
 
@@ -114,76 +111,6 @@ Given a point \f$p\f$ where the guard is standing, and a \f $k \f$ denoting the 
         Polygon find_visibility_region(int k, CGAL::Point_2<Kernel> p);
 /// @}
 
-        void testRadial(CGAL::Point_2<Kernel> p);
-        std::unordered_map<int, int> naiveVertexToEdges;
-        std::unordered_map<int, int> trapVertexToEdges;
-        bool disableDraw = false;
-
-        Segment getWall(Vertex_const_handle vh, Halfedge_const_handle hh) {
-            Line l = ((Segment)hh->curve()).supporting_line();
-            FT y = l.y_at_x(vh->point().hx());
-            FT x = vh->point().hx();
-            return Segment(vh->point(), Point(x, y));
-        }
-
-        Segment getWall(Vertex_const_handle vh1, Vertex_const_handle vh2) {
-            return Segment(vh1->point(), vh2->point());
-        }
-
-        template<typename Kernel>
-        void testDecompose(CGAL::Polygon_2<Kernel> p) {
-            Polygon poly;
-            for (auto v : p.vertices()) {
-                poly.push_back(Point(v.x(), v.y()));
-            }
-            Vert_decomp_list vd_list;
-            Arrangement tarr;
-            insert(tarr, poly.edges_begin(), poly.edges_end());
-            CGAL::decompose(tarr, std::back_inserter(vd_list));
-            for (auto vd_iter = vd_list.begin(); vd_iter != vd_list.end(); ++vd_iter) {
-                const Object_pair& curr = vd_iter->second;
-                std::cout << "Vertex (" << vd_iter->first->point() << ") : ";
-                Vertex_const_handle vh;
-                Halfedge_const_handle hh;
-                Face_const_handle fh;
-                std::cout << " feature below: ";
-                if (CGAL::assign(hh, curr.first)) {
-                    std::cout << '[' << hh->curve() << ']';
-                    insert(tarr, getWall(vd_iter->first, hh));
-
-                }
-                else if (CGAL::assign(vh, curr.first)) {
-                    std::cout << '(' << vh->point() << ')';
-                    insert(tarr, getWall(vd_iter->first, vh));
-                }
-                else if (CGAL::assign(fh, curr.first)) {
-                    std::cout << "NONE";
-                }
-                else {
-                    std::cout << "EMPTY";
-                }
-
-                std::cout << "   feature above: ";
-                if (CGAL::assign(hh, curr.second)) {
-                    std::cout << '[' << hh->curve() << "]\n";
-                    insert(tarr, getWall(vd_iter->first, hh));
-
-                }
-                else if (CGAL::assign(vh, curr.second)) {
-                    std::cout << '(' << vh->point() << ")\n";
-                    insert(tarr, getWall(vd_iter->first, vh));
-                }
-                else if (CGAL::assign(fh, curr.second)) {
-                    std::cout << "NONE\n";
-                }
-                else {
-                    std::cout << "EMPTY\n";
-                }
-            }
-            testDraw(tarr, true);
-        }
-
-
     private:
 
         Polygon polygon;
@@ -209,13 +136,13 @@ Given a point \f$p\f$ where the guard is standing, and a \f $k \f$ denoting the 
         Face_handle unboundedFace;
 
         void getLowerUpper();
-        void lowerUpperHelper(int start, int end, int&, FT ly, FT uy, std::vector<Segment>&, std::vector<Segment>&);
         void merge();
         bool isPointHorizontalWithVertex(Point p);
         void findZeroVisibilty();
         void findNextRegion();
         int countFaceSides(Face_const_handle);
         void addHalfedge(Halfedge_const_handle stop);
+
         typedef enum {
             TOP,
             LEFT,
@@ -224,69 +151,12 @@ Given a point \f$p\f$ where the guard is standing, and a \f $k \f$ denoting the 
         } SIDE;
 
         typedef struct {
-            bool isSeg;
-            bool isNone;
-            Segment seg;
-            Point p;
-
-        } RadialFeature;
-
-
-        template<typename T>
-        void testDraw(T t, bool overrideDisable = false) {
-            if (this->disableDraw && !overrideDisable) return;
-
-            CGAL::draw(t);
-           
-        }
-
-        typedef struct {
-            int vertexId;
-            RadialFeature left;
-            RadialFeature right;
-        } TestRadialEdges;
-
-        std::string printRadialFeature(RadialFeature r) {
-            std::string s;
-            if (r.isNone) {
-                s = " no feature ";
-            }
-            else if (r.isSeg){
-                s = " segment " + r.seg.toString();
-            }
-            else {
-                s = " point " + r.p.toString2();
-            }
-            return s;
-        }
-
-        std::string printTest(TestRadialEdges t) {
-            std::string s;
-            s = " left: " + printRadialFeature(t.left) + " right: " + printRadialFeature(t.right) + "\n";
-            return s;
-        }
-
-        struct {
-            bool operator()(TestRadialEdges& a, TestRadialEdges& b) {
-                return a.vertexId < b.vertexId;
-            }
-        } compareTest;
-
-        std::vector<Segment> non_projected_edges;
-        std::vector<Segment> non_projected_edges_upper;
-        std::vector<Segment> non_projected_edges_lower;
-       
-
-        std::vector<TestRadialEdges> naiveTest;
-        std::vector<TestRadialEdges> linearTest;
-
-        typedef struct {
             Vertex_handle vh1;
             Vertex_handle vh2;
         } BboxEdge;
+
         std::vector<BboxEdge> bboxEdges;
         void insertBbox(FT, SIDE, FT, FT, Vertex_handle, Vertex_handle);
-        void getBboxIntersections(Segment edge, std::vector<Point>& list);
         
 
         Halfedge_handle extendRadial(Halfedge_const_handle);
@@ -386,7 +256,6 @@ Given a point \f$p\f$ where the guard is standing, and a \f $k \f$ denoting the 
         //    Point rp = Point(pointOnLine.hx() / w, pointOnLine.hy() / w, 1);
             FT x = pointOnLine.hx();
             FT y = pointOnLine.hy();
-            non_projected_edges.push_back(seg);
             FT lineLength = CGAL::squared_distance(source, target);
             FT distFromSource = CGAL::squared_distance(source, pointOnLine);
             FT B = distFromSource / lineLength;
@@ -483,7 +352,7 @@ Given a point \f$p\f$ where the guard is standing, and a \f $k \f$ denoting the 
             this->polygon.push_back(np);
             i += 1;
         }
-        testDraw(p);
+        
       
         intersectionPoints.clear();
         if (p.is_empty()) {
@@ -509,106 +378,6 @@ Given a point \f$p\f$ where the guard is standing, and a \f $k \f$ denoting the 
     }
 
     template<typename Kernel>
-    void K_visibility_region<Kernel>::lowerUpperHelper(int start, int end, int &artCounter, FT ly, FT uy, std::vector<Segment> &testLower, std::vector<Segment> &testUpper) {
-        typedef enum {
-            ABOVE = 0,
-            BELOW = 1
-        } STATE;
-        static STATE state = BELOW;
-        static STATE lastState = BELOW;
-         state = BELOW;// (start + 1 < polygon.vertices().size() ? (polygon.vertex(start).y() < polygon.vertex(start + 1).y() ? BELOW : ABOVE) : (polygon.vertex(start).y() < polygon.vertex(0).y() ? BELOW : ABOVE));
-        Segment e;
-        Line l;
-        int nv = this->polygon.vertices().size();
-
-        for (int i = start; i < end; i++) {
-            e = this->polygon.edge(i);
-
-            l = e.supporting_line();
-            if (state == ABOVE) {
-                if (this->intersectionPoints[i].first == nullptr) {
-                    projection_insert(upperEdgeList, e);
-                    testUpper.push_back(e);
-                    testArrUpper.clear();
-                    insert(testArrUpper, testUpper.begin(), testUpper.end());
-                 //   testDraw(testArrUpper);
-
-                  //  insert(testArrUpper, e);
-                    continue;
-                }
-                Point low(l.x_at_y(ly), ly);
-                low.id() = e.start().id();
-                artCounter++;
-                low.isArtificial() = true;
-                Segment lowSeg(low, e.end());
-              //  insert(testArrLower, lowSeg);
-
-                lowSeg.id() = e.id();
-                projection_insert(lowerEdgeList, lowSeg);
-                testLower.push_back(lowSeg);
-
-                Point up(l.x_at_y(uy), uy);
-                up.isArtificial() = true;
-                up.id() = e.end().id();
-                 artCounter++;
-                Segment upSeg(e.start(), up);
-             //   insert(testArrUpper, upSeg);
-
-                upSeg.id() = e.id();
-                projection_insert(upperEdgeList, upSeg);
-                testUpper.push_back(upSeg);
-
-                state = BELOW;
-                lastState = ABOVE;
-            }
-            else if (state == BELOW) {
-                lastState = BELOW;
-                if (this->intersectionPoints[i].first != nullptr) {
-
-                    Point low(l.x_at_y(ly), ly);
-                    low.isArtificial() = true;
-                    low.id() = e.start().id();
-                    artCounter++;
-                    Segment lowSeg(e.start(), low);
-                    lowSeg.id() = e.id();
-                    projection_insert(lowerEdgeList, lowSeg);
-                    testLower.push_back(lowSeg);
-
-                    Point up(l.x_at_y(uy), uy);
-                    up.isArtificial() = true;
-                    up.id() = e.end().id();
-                    artCounter++;
-
-                    Segment upSeg(up, e.end());
-                    upSeg.id() = e.id();
-                    
-
-                    projection_insert(upperEdgeList, upSeg);
-                    testUpper.push_back(upSeg);
-                    state = ABOVE;
-                }
-                else {
-                    projection_insert(lowerEdgeList, e);
-                    testLower.push_back(e);
-                    testArrLower.clear();
-                 //   insert(testArrLower, testLower.begin(), testLower.end());
-                 //     testDraw(testArrLower);
-                  //  insert(testArrLower, e);
-                }
-            }
-            testArrLower.clear();
-            testArrUpper.clear();
-          //  insert(testArrLower, testLower.begin(), testLower.end());
-         //   testDraw(testArrLower);
-
-            insert(testArrUpper, testUpper.begin(), testUpper.end());
-         //   testDraw(testArrUpper);
-        }
-        state = lastState;
-        
-    }
-
-    template<typename Kernel>
     void K_visibility_region<Kernel>::getLowerUpper() {
 
 
@@ -625,7 +394,7 @@ Given a point \f$p\f$ where the guard is standing, and a \f $k \f$ denoting the 
             if (edge.source().y() > queryPoint.y() && edge.target().y() > queryPoint.y()) {
                 projection_insert(upperEdgeList, edge);
                 insert(testArrUpper, edge);
-           //     testDraw(testArrUpper);
+           //     
                 continue;
             }
 
@@ -665,28 +434,9 @@ Given a point \f$p\f$ where the guard is standing, and a \f $k \f$ denoting the 
                 projection_insert(upperEdgeList, upSeg);
                 insert(testArrUpper, upSeg);
                 insert(testArrLower, lowSeg);
-
-
             }
          
         }
-
-        testDraw(testArrLower, true);
-        testDraw(testArrUpper, true);   
-
-        int artCounter = 0;
-        int nv = this->polygon.vertices().size();
-
-       
-   
-      //  lowerEdgeList.clear();
-       // upperEdgeList.clear();
-   
-     //   this->lowerUpperHelper(this->leftIntersectionIndex, this->intersectionPoints.size(), artCounter, ly, uy, testLower, testUpper);
-     //   this->lowerUpperHelper(0, this->leftIntersectionIndex, artCounter, ly, uy, testLower, testUpper);
-
-      //  insert(testArrLower, testLower.begin(), testLower.end());
-      //  insert(testArrUpper, testUpper.begin(), testUpper.end());
     }
 
     template<typename Kernel>
@@ -727,7 +477,7 @@ Given a point \f$p\f$ where the guard is standing, and a \f $k \f$ denoting the 
         for (int i = 0; i < polygon.vertices().size(); i++) {
             pointToSegments[polygon.vertex(i).id()] = std::make_pair(polygon.edge(i), polygon.edge(i));
         }
-        testDraw(polygon);
+        
         getLowerUpper();
         insert_non_intersecting_curves(arr, polygon.edges().begin(), polygon.edges().end());
         findZeroVisibilty();
@@ -736,14 +486,14 @@ Given a point \f$p\f$ where the guard is standing, and a \f $k \f$ denoting the 
         for (Halfedge_const_handle h : nextRegionHalfedges) {
             region.push_back(h->source()->point());
         }
-        testDraw(region);
+        
         while (k > 0) {
             findNextRegion();
             region.clear();
             for (Halfedge_const_handle h : nextRegionHalfedges) {
                 region.push_back(h->source()->point());
             }
-            testDraw(region);
+            
             k -= 1;
         }
      return this->polygon;
@@ -851,18 +601,10 @@ Given a point \f$p\f$ where the guard is standing, and a \f $k \f$ denoting the 
                 }
 
                 if (has_hh) { // nothing below, edge above
-                    inv_projection_insert(hh, vertex);
-                    RadialFeature right = { true, false, hh->curve(), Point()};
-                    RadialFeature left = { false, true, Segment(), Point()};
-                    TestRadialEdges r = {id, left, right};
-                    linearTest.push_back(r);
+                    inv_projection_insert(hh, vertex);                               
                 }
                 else { // nothing below, vertex above
-                    inv_projection_insert(vh, vertex);
-                    RadialFeature right = { false, false, Segment(), vh->point()};
-                    RadialFeature left = {false, true, Segment(), Point()};
-                    TestRadialEdges r = {id, left, right};
-                    linearTest.push_back(r);
+                    inv_projection_insert(vh, vertex);                            
                 }
             }
             else { // something below
@@ -874,53 +616,25 @@ Given a point \f$p\f$ where the guard is standing, and a \f $k \f$ denoting the 
                 Face_const_handle fh2;
                 if (!(has_hh2 = CGAL::assign(hh2, curr.second)) && !(has_vh2 = CGAL::assign(vh2, curr.second))) { // nothing above
                     if (has_hh) { // nothing above, edge below
-                        inv_projection_insert(hh, vertex);
-                        RadialFeature left = { true, false, hh->curve(), Point()};
-                        RadialFeature right = { false, true, Segment(), Point()};
-                        TestRadialEdges r = { id, left, right };
-                        linearTest.push_back(r);
-
+                        inv_projection_insert(hh, vertex);                                                                    
                     }
                     else { // nothing above, vertex below
                         inv_projection_insert(vh, vertex);
-                        RadialFeature left = { false, false, Segment(), vh->point() };
-                        RadialFeature right = { false, true, Segment(), Point() };
-                        TestRadialEdges r = { id, left, right };      
-                        linearTest.push_back(r);                      
                     }                                                 
                     continue;                                         
                 }                                                     
                 if (has_hh && has_hh2) {                              
                     inv_projection_insert(hh, hh2, vertex);           
-                    RadialFeature left = { true, false, hh->curve(), Point() };
-                    RadialFeature right = { true, false, hh2->curve(),Point() }; 
-                    TestRadialEdges r = {id, left, right};
-                    linearTest.push_back(r);
                 }
                 else if (has_vh && has_vh2) {
                     inv_projection_insert(vh, vh2, vertex);
-                    RadialFeature left = { false, false, Segment(),vh->point() };
-                    RadialFeature right = { false, false, Segment(), vh2->point()};
-                    TestRadialEdges r = { id, left, right };
-                    linearTest.push_back(r);
-
                 }
                 else if (has_hh && has_vh2) {
                     inv_projection_insert(hh, vh2, vertex);
-                    RadialFeature left = { true, false, hh->curve(), Point() };
-                    RadialFeature right = { false, false, Segment(), vh2->point()};
-                    TestRadialEdges r = { id, left, right };
-                    linearTest.push_back(r);
-
                 }
                 else if (has_vh && has_hh2) {
                     inv_projection_insert(vh, hh2, vertex);
-                    inv_projection_insert(hh, vh2, vertex);
-                    RadialFeature left = { false, false, Segment(), vh->point()};
-                    RadialFeature right = { true, false, hh2->curve(), Point()};
-                    TestRadialEdges r = { id, left, right };
-                    linearTest.push_back(r);
-
+                    inv_projection_insert(hh, vh2, vertex);                                                        
                 }
             }
         }
@@ -931,11 +645,8 @@ Given a point \f$p\f$ where the guard is standing, and a \f $k \f$ denoting the 
         testPolygon.clear();
         int artCounter = 0;
         CGAL::insert(lowerArr, lowerEdgeList.begin(), lowerEdgeList.end());
-
-        testDraw(lowerArr, true);
-
         CGAL::insert(upperArr, upperEdgeList.begin(), upperEdgeList.end());
-       testDraw(upperArr, true);
+       
 
         std::vector<Segment> el2;
         std::vector<Segment> ul2;
@@ -957,17 +668,11 @@ Given a point \f$p\f$ where the guard is standing, and a \f $k \f$ denoting the 
         CGAL::insert(arr1, el2.begin(), el2.end());
         CGAL::insert(arr2, ul2.begin(), ul2.end());
 
-        non_projected_edges.clear();
         radialHelper(p, lowerArr, artCounter);
-        non_projected_edges_lower = non_projected_edges;
-        non_projected_edges.clear();
         radialHelper(p, upperArr, artCounter);
-        non_projected_edges_upper = non_projected_edges;
-        insert(lowerArr, non_projected_edges_lower.begin(), non_projected_edges_lower.end());
-        testDraw(lowerArr);
+        
 
-        insert(upperArr, non_projected_edges_upper.begin(), non_projected_edges_upper.end());
-        testDraw(upperArr);
+        
     }
 
     template <class Kernel>
@@ -1150,13 +855,10 @@ Given a point \f$p\f$ where the guard is standing, and a \f $k \f$ denoting the 
                // insert(arr, Segment(left, vertex));
                 radialList.push_back(Segment(left, right));
 
-                RadialFeature left = { true, false, leftSeg, Point()};
-                RadialFeature right = { true, false, rightSeg, Point()};
-                TestRadialEdges r = { vertex.id(), left, right};
+                                               
 
-                naiveTest.push_back(r);
                 
-              //  testDraw(arr);
+              //  
               //  insert_non_intersecting_curve(arr, Segment(right, vertex));
 
                 // split vertex to be able to insert using insert_non_intersecting_curves()
@@ -1176,10 +878,7 @@ Given a point \f$p\f$ where the guard is standing, and a \f $k \f$ denoting the 
 
                 radialList.push_back(Segment(vertex, right));
                 intersectionList[sid(rightSeg)].push_back(right);
-                RadialFeature left = { true, true, Segment(), Point()};
-                RadialFeature right = { true, false, rightSeg, Point()};
-                TestRadialEdges r = {vertex.id(),left, right};
-                naiveTest.push_back(r);
+                                               
 
               /*  if (isVertical ? vertex.y() > p.y() : vertex.x() > p.x()) {
                     radialList.push_back(Segment(p, vertex));
@@ -1197,10 +896,7 @@ Given a point \f$p\f$ where the guard is standing, and a \f $k \f$ denoting the 
 
                 radialList.push_back(Segment(left, vertex));
                 intersectionList[sid(leftSeg)].push_back(left);
-                RadialFeature right = { true, true, Segment(), Point()};
-                RadialFeature left = { true, false, leftSeg, Point()};
-                TestRadialEdges r = { vertex.id(),left, right };
-                naiveTest.push_back(r);
+                                                
 
                /* if (isVertical ? vertex.y() < p.y() : vertex.x() < p.x()) {
                     radialList.push_back(Segment(p, vertex));
@@ -1252,7 +948,6 @@ Given a point \f$p\f$ where the guard is standing, and a \f $k \f$ denoting the 
         assert(nextRegionHalfedges.size() == 0);
         Arrangement test;
         for (Halfedge_const_handle edge : currentRegionHalfedges) {
-            test.clear();
             Halfedge_const_handle oppFaceEdge = edge->twin();
             //   Halfedge_const_handle queryEdge = oppFaceEdge->next();
             Face_handle face = &*(oppFaceEdge->face());
@@ -1276,11 +971,8 @@ Given a point \f$p\f$ where the guard is standing, and a \f $k \f$ denoting the 
          //   extendRadial(edge);
 
         //}
-            test.clear();
-            for (Halfedge_const_handle h : nextRegionHalfedges) {
-                insert(test, Segment(h->source()->point(), h->target()->point()));
-            }
-        //    testDraw(test);
+           
+           
         }
     }
 
@@ -1416,7 +1108,7 @@ Given a point \f$p\f$ where the guard is standing, and a \f $k \f$ denoting the 
         Face_handle intFace = h->face()->is_unbounded() ? h->twin()->face() : h->face();
         regular_visibility.compute_visibility(this->queryPoint, intFace, RegularVisibilityOutput);
 
-        testDraw(RegularVisibilityOutput);
+        
         
         int sid, tid;
         Halfedge_handle start = RegularVisibilityOutput.halfedges_begin()->twin(); // calling twin ensures its a halfedge_handle
@@ -1437,7 +1129,7 @@ Given a point \f$p\f$ where the guard is standing, and a \f $k \f$ denoting the 
         addBoundingBox();
         naiveRadial(this->queryPoint);
         insert(arr, radialList.begin(), radialList.end());
-        testDraw(arr);
+        
         
         Halfedge_iterator hit = this->arr.halfedges_begin();
         Halfedge_handle hh = hit->next()->prev();
@@ -1519,7 +1211,7 @@ Given a point \f$p\f$ where the guard is standing, and a \f $k \f$ denoting the 
             arr.insert_at_vertices(s, e.vh1, e.vh2);
         }
 
-        testDraw(arr);
+        
 
     }
 
@@ -1596,54 +1288,5 @@ Given a point \f$p\f$ where the guard is standing, and a \f $k \f$ denoting the 
         }
     }
 
-    template<class Kernel>
-    void K_visibility_region<Kernel>::testRadial(CGAL::Point_2<Kernel> p) {
-        linearTest.clear();
-        naiveTest.clear();
-        this->queryPoint = Point(p.x(), p.y());
-        while (this->isPointHorizontalWithVertex(this->queryPoint)) {
-            this->polygon = CGAL::transform(*translateToOrigin, this->polygon);
-            this->polygon = CGAL::transform(*rotate, this->polygon);
-            this->polygon = CGAL::transform(*translateBack, this->polygon);
-            std::cout << "rotatiing" << std::endl;
-        }
-        getLowerUpper();
-        insert_non_intersecting_curves(arr, polygon.edges_begin(), polygon.edges_end());
-        Arrangement t;
-        insert(t, polygon.edges_begin(), polygon.edges_end());
-        insert(t, Segment(Point(queryPoint.x(), queryPoint.y()), Point(queryPoint.x(), queryPoint.y() - 1)));
-        testDraw(t);
-        testDraw(testArrLower, true);
-        testDraw(testArrUpper, true);
-        getRadial(this->queryPoint);
-        insert(arr, this->radialList.begin(), this->radialList.end());
-        insert(arr, Segment(Point(queryPoint.x(), queryPoint.y() - 1), Point(queryPoint.x(), queryPoint.y() - 10)));
-        insert(arr, Segment(Point(queryPoint.x(), queryPoint.y() + 1), Point(queryPoint.x(), queryPoint.y() + 5)));
-
-      //  testDraw(arr, true);
-        std::sort(linearTest.begin(), linearTest.end(), compareTest);
-        
-        this->arr.clear();
-        this->radialList.clear();
-       
-        insert_non_intersecting_curves(arr, this->polygon.edges_begin(), this->polygon.edges_end());
-        // addBoundingBox();
-        naiveRadial(this->queryPoint);
-        insert(arr, this->radialList.begin(), this->radialList.end());
-        testDraw(arr, true);
-
-        std::sort(naiveTest.begin(), naiveTest.end(), compareTest);
-        
-        std::cout << "linear has size " << linearTest.size() << " naive has size " << naiveTest.size() << std::endl;
-        int M = std::min(linearTest.size(), naiveTest.size());
-        for (int i = 0; i < M; i++) {
-            std::cout << "Naive: Vertex " << polygon.vertex(naiveTest[i].vertexId).toString() << printTest(naiveTest[i]);
-            std::cout << "Linear: Vertex " << polygon.vertex(linearTest[i].vertexId).toString() << printTest(linearTest[i]);
-            std::cout << std::endl;
-
-
-        }
-
-    }
     
 } /* end K_Visibility_2 */
