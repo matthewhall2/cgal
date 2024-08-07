@@ -45,7 +45,7 @@ namespace CGAL {
 */
 
     template<class Kernel>
-    class K_visibility_region {
+    class K_visibility_2 {
 
         using FT = typename Kernel::FT;
         using RT = typename Kernel::RT;
